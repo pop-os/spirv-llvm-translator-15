@@ -1,0 +1,5 @@
+spirv-llvm-translator (8.0~git20190205-1) UNRELEASED; urgency=medium
+
+  * Initial release (Closes: #921422)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 04 Feb 2019 11:15:41 +0200
