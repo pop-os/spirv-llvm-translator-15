@@ -1,5 +1,5 @@
-spirv-llvm-translator (8.0.0-1) UNRELEASED; urgency=medium
+spirv-llvm-translator (8.0.0-1) experimental; urgency=medium
 
   * Initial release (Closes: #921422)
 
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 04 Feb 2019 11:15:41 +0200
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 06 Feb 2019 01:40:18 +0200
