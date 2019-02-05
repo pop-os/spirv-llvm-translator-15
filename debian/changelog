@@ -1,4 +1,4 @@
-spirv-llvm-translator (8.0~git20190205-1) UNRELEASED; urgency=medium
+spirv-llvm-translator (8.0.0-1) UNRELEASED; urgency=medium
 
   * Initial release (Closes: #921422)
 
