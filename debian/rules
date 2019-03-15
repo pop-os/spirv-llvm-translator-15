@@ -14,6 +14,7 @@ override_dh_auto_build:
 	(cd build; make llvm-spirv)
 
 	strip build/lib/SPIRV/lib*
+	ar -s build/lib/SPIRV/lib*
 
 gentarball:
 	tar --transform 's,^,$(DEB_SOURCE)-$(DEB_VERSION_UPSTREAM)/,' \
