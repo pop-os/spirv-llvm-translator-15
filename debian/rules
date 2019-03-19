@@ -7,14 +7,14 @@ include /usr/share/dpkg/pkg-info.mk
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
-		-DCMAKE_CXX_FLAGS="-fPIC"
+		-DBUILD_SHARED_LIBS=ON
 
 override_dh_auto_build:
 	dh_auto_build
 	(cd build; make llvm-spirv)
 
-	strip build/lib/SPIRV/lib*
-	ar -s build/lib/SPIRV/lib*
+override_dh_missing:
+	dh_missing --fail-missing
 
 gentarball:
 	tar --transform 's,^,$(DEB_SOURCE)-$(DEB_VERSION_UPSTREAM)/,' \
