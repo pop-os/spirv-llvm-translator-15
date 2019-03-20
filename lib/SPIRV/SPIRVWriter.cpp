@@ -735,9 +735,12 @@ SPIRVValue *LLVMToSPIRV::transValueWithoutDecoration(Value *V,
       }
       Inst->dropAllReferences();
     }
+    // Translate initializer first.
+    SPIRVValue *BVarInit =
+        (Init && !isa<UndefValue>(Init)) ? transValue(Init, nullptr) : nullptr;
+
     auto BVar = static_cast<SPIRVVariable *>(BM->addVariable(
-        transType(Ty), GV->isConstant(), transLinkageType(GV),
-        (Init && !isa<UndefValue>(Init)) ? transValue(Init, nullptr) : nullptr,
+        transType(Ty), GV->isConstant(), transLinkageType(GV), BVarInit,
         GV->getName(),
         SPIRSPIRVAddrSpaceMap::map(
             static_cast<SPIRAddressSpace>(Ty->getAddressSpace())),
@@ -1194,7 +1197,8 @@ SPIRVValue *LLVMToSPIRV::transIntrinsicInst(IntrinsicInst *II,
     // LLVM intrinsic functions shouldn't get to SPIRV, because they
     // would have no definition there.
     BM->getErrorLog().checkError(false, SPIRVEC_InvalidFunctionCall,
-                                 II->getName().str(), "", __FILE__, __LINE__);
+                                 II->getCalledValue()->getName().str(), "",
+                                 __FILE__, __LINE__);
   }
   return nullptr;
 }
