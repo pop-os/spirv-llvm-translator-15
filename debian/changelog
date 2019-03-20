@@ -4,6 +4,7 @@ spirv-llvm-translator (8.0.0+git20190314-1) UNRELEASED; urgency=medium
   * Build a shared library.
   * Package llvm-spirv.
   * Add patch to support clang block syntax.
+  * rules: Drop rpath.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Mar 2019 16:03:22 +0200
 
