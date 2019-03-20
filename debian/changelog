@@ -1,4 +1,4 @@
-spirv-llvm-translator (8.0.0+git20190314-1) UNRELEASED; urgency=medium
+spirv-llvm-translator (8.0.0+git20190314-1) experimental; urgency=medium
 
   * New upstream snapshot.
   * Build a shared library.
@@ -6,7 +6,7 @@ spirv-llvm-translator (8.0.0+git20190314-1) UNRELEASED; urgency=medium
   * Add patch to support clang block syntax.
   * rules: Drop rpath.
 
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Mar 2019 16:03:22 +0200
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 20 Mar 2019 17:24:46 +0200
 
 spirv-llvm-translator (8.0.0-3) experimental; urgency=medium
 
