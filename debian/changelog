@@ -1,3 +1,9 @@
+spirv-llvm-translator (8.0.0+git20190314-2) UNRELEASED; urgency=medium
+
+  * rules: Set build type as 'Release'.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 16 Apr 2019 14:03:14 +0300
+
 spirv-llvm-translator (8.0.0+git20190314-1) experimental; urgency=medium
 
   * New upstream snapshot.
