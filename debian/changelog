@@ -1,5 +1,6 @@
-spirv-llvm-translator (8.0.0+git20190314-2) UNRELEASED; urgency=medium
+spirv-llvm-translator (8.0.1-1) UNRELEASED; urgency=medium
 
+  * New upstream release.
   * rules: Set build type as 'Release'.
   * handle-llvm-memcpy-with-non-matching-alignment.diff: Fix an assert
     due to memory alignment mismatch.
