@@ -1,10 +1,10 @@
-spirv-llvm-translator (8.0.1-1) UNRELEASED; urgency=medium
+spirv-llvm-translator (8.0.1-1) unstable; urgency=medium
 
   * New upstream release.
   * rules: Set build type as 'Release'.
   * debian/patches: Refreshed.
 
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 16 Apr 2019 14:03:14 +0300
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 01 Aug 2019 10:06:44 +0300
 
 spirv-llvm-translator (8.0.0+git20190314-1) experimental; urgency=medium
 
