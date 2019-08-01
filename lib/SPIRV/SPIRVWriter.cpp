@@ -132,6 +132,7 @@ LLVMToSPIRV::LLVMToSPIRV(SPIRVModule *SMod)
 
 bool LLVMToSPIRV::runOnModule(Module &Mod) {
   M = &Mod;
+  CG = make_unique<CallGraph>(Mod);
   Ctx = &M->getContext();
   DbgTran->setModule(M);
   assert(BM && "SPIR-V module not initialized");
@@ -343,13 +344,22 @@ SPIRVType *LLVMToSPIRV::transType(Type *T) {
     return mapType(T, BM->addVectorType(transType(T->getVectorElementType()),
                                         T->getVectorNumElements()));
 
-  if (T->isArrayTy())
+  if (T->isArrayTy()) {
+    // SPIR-V 1.3 s3.32.6: Length is the number of elements in the array.
+    //                     It must be at least 1.
+    if (T->getArrayNumElements() < 1) {
+      std::string Str;
+      llvm::raw_string_ostream OS(Str);
+      OS << *T;
+      SPIRVCK(T->getArrayNumElements() >= 1, InvalidArraySize, OS.str());
+    }
     return mapType(T, BM->addArrayType(
                           transType(T->getArrayElementType()),
                           static_cast<SPIRVConstant *>(transValue(
                               ConstantInt::get(getSizetType(),
                                                T->getArrayNumElements(), false),
                               nullptr))));
+  }
 
   if (T->isStructTy() && !T->isSized()) {
     auto ST = dyn_cast<StructType>(T);
@@ -1113,6 +1123,14 @@ SPIRVValue *LLVMToSPIRV::transIntrinsicInst(IntrinsicInst *II,
     std::vector<SPIRVWord> MemoryAccess(1, MemoryAccessMaskNone);
     if (SPIRVWord AlignVal = MI->getDestAlignment()) {
       MemoryAccess[0] |= MemoryAccessAlignedMask;
+      if (auto MTI = dyn_cast<MemTransferInst>(MI)) {
+        SPIRVWord SourceAlignVal = MTI->getSourceAlignment();
+        assert(SourceAlignVal && "Missed Source alignment!");
+
+        // In a case when alignment of source differs from dest one
+        // least value is guaranteed anyway.
+        AlignVal = std::min(AlignVal, SourceAlignVal);
+      }
       MemoryAccess.push_back(AlignVal);
     }
     if (MI->isVolatile())
@@ -1169,9 +1187,6 @@ SPIRVValue *LLVMToSPIRV::transIntrinsicInst(IntrinsicInst *II,
                                       GetMemoryAccess(MSI), BB);
   } break;
   case Intrinsic::memcpy:
-    assert(cast<MemCpyInst>(II)->getSourceAlignment() ==
-               cast<MemCpyInst>(II)->getDestAlignment() &&
-           "Alignment mismatch!");
     return BM->addCopyMemorySizedInst(
         transValue(II->getOperand(0), BB), transValue(II->getOperand(1), BB),
         transValue(II->getOperand(2), BB),
@@ -1309,6 +1324,59 @@ bool LLVMToSPIRV::transGlobalVariables() {
   return true;
 }
 
+bool LLVMToSPIRV::isAnyFunctionReachableFromFunction(
+    const Function *FS,
+    const std::unordered_set<const Function *> Funcs) const {
+  std::unordered_set<const Function *> Done;
+  std::unordered_set<const Function *> ToDo;
+  ToDo.insert(FS);
+
+  while (!ToDo.empty()) {
+    auto It = ToDo.begin();
+    const Function *F = *It;
+
+    if (Funcs.find(F) != Funcs.end())
+      return true;
+
+    ToDo.erase(It);
+    Done.insert(F);
+
+    const CallGraphNode *FN = (*CG)[F];
+    for (unsigned I = 0; I < FN->size(); ++I) {
+      const CallGraphNode *NN = (*FN)[I];
+      const Function *NNF = NN->getFunction();
+      if (!NNF)
+        continue;
+      if (Done.find(NNF) == Done.end()) {
+        ToDo.insert(NNF);
+      }
+    }
+  }
+
+  return false;
+}
+
+void LLVMToSPIRV::collectInputOutputVariables(SPIRVFunction *SF, Function *F) {
+  for (auto &GV : M->globals()) {
+    const auto AS = GV.getAddressSpace();
+    if (AS != SPIRAS_Input && AS != SPIRAS_Output)
+      continue;
+
+    std::unordered_set<const Function *> Funcs;
+
+    for (const auto &U : GV.uses()) {
+      const Instruction *Inst = dyn_cast<Instruction>(U.getUser());
+      if (!Inst)
+        continue;
+      Funcs.insert(Inst->getFunction());
+    }
+
+    if (isAnyFunctionReachableFromFunction(F, Funcs)) {
+      SF->addVariable(ValueMap[&GV]);
+    }
+  }
+}
+
 void LLVMToSPIRV::mutateFuncArgType(
     const std::map<unsigned, Type *> &ChangedType, Function *F) {
   for (auto &I : ChangedType) {
@@ -1349,6 +1417,9 @@ void LLVMToSPIRV::transFunction(Function *I) {
       BF->shouldFPContractBeDisabled()) {
     BF->addExecutionMode(BF->getModule()->add(
         new SPIRVExecutionMode(BF, spv::ExecutionModeContractionOff)));
+  }
+  if (BF->getModule()->isEntryPoint(spv::ExecutionModelKernel, BF->getId())) {
+    collectInputOutputVariables(BF, I);
   }
 }
 

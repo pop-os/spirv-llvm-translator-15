@@ -444,12 +444,18 @@ Type *SPIRVToLLVM::transType(SPIRVType *T, bool IsClassMember) {
         T, getOrCreateOpaquePtrType(M, transOCLPipeStorageTypeName(PST),
                                     getOCLOpaqueTypeAddrSpace(T->getOpCode())));
   }
+  // OpenCL Compiler does not use this instruction
+  case OpTypeVmeImageINTEL:
+    return nullptr;
   default: {
     auto OC = T->getOpCode();
-    if (isOpaqueGenericTypeOpCode(OC))
+    if (isOpaqueGenericTypeOpCode(OC) || isSubgroupAvcINTELTypeOpCode(OC)) {
+      auto Name = isSubgroupAvcINTELTypeOpCode(OC)
+                      ? OCLSubgroupINTELTypeOpCodeMap::rmap(OC)
+                      : OCLOpaqueTypeOpCodeMap::rmap(OC);
       return mapType(
-          T, getOrCreateOpaquePtrType(M, OCLOpaqueTypeOpCodeMap::rmap(OC),
-                                      getOCLOpaqueTypeAddrSpace(OC)));
+          T, getOrCreateOpaquePtrType(M, Name, getOCLOpaqueTypeAddrSpace(OC)));
+    }
     llvm_unreachable("Not implemented");
   }
   }
@@ -557,6 +563,18 @@ void SPIRVToLLVM::setName(llvm::Value *V, SPIRVValue *BV) {
     V->setName(Name);
 }
 
+inline llvm::Metadata *SPIRVToLLVM::getMetadataFromName(std::string Name) {
+  return llvm::MDNode::get(*Context, llvm::MDString::get(*Context, Name));
+}
+
+inline std::vector<llvm::Metadata *>
+SPIRVToLLVM::getMetadataFromNameAndParameter(std::string Name,
+                                             SPIRVWord Parameter) {
+  return {MDString::get(*Context, Name),
+          ConstantAsMetadata::get(
+              ConstantInt::get(Type::getInt32Ty(*Context), Parameter))};
+}
+
 void SPIRVToLLVM::setLLVMLoopMetadata(SPIRVLoopMerge *LM, BranchInst *BI) {
   if (!LM)
     return;
@@ -565,22 +583,76 @@ void SPIRVToLLVM::setLLVMLoopMetadata(SPIRVLoopMerge *LM, BranchInst *BI) {
   auto Self = MDNode::get(*Context, Temp.get());
   Self->replaceOperandWith(0, Self);
 
-  if (LM->getLoopControl() == LoopControlMaskNone) {
+  SPIRVWord LC = LM->getLoopControl();
+  if (LC == LoopControlMaskNone) {
     BI->setMetadata("llvm.loop", Self);
     return;
-  } else if (LM->getLoopControl() == LoopControlUnrollMask)
-    Name = llvm::MDString::get(*Context, "llvm.loop.unroll.full");
-  else if (LM->getLoopControl() == LoopControlDontUnrollMask)
-    Name = llvm::MDString::get(*Context, "llvm.loop.unroll.disable");
-  else
-    return;
+  }
 
-  std::vector<llvm::Metadata *> OpValues(1, Name);
-  SmallVector<llvm::Metadata *, 2> Metadata;
+  unsigned NumParam = 0;
+  std::vector<llvm::Metadata *> Metadata;
+  std::vector<SPIRVWord> LoopControlParameters = LM->getLoopControlParameters();
   Metadata.push_back(llvm::MDNode::get(*Context, Self));
-  Metadata.push_back(llvm::MDNode::get(*Context, OpValues));
 
+  // To correctly decode loop control parameters, order of checks for loop
+  // control masks must match with the order given in the spec (see 3.23),
+  // i.e. check smaller-numbered bits first.
+  // Unroll and UnrollCount loop controls can't be applied simultaneously with
+  // DontUnroll loop control.
+  if (LC & LoopControlUnrollMask)
+    Metadata.push_back(getMetadataFromName("llvm.loop.unroll.enable"));
+  else if (LC & LoopControlDontUnrollMask)
+    Metadata.push_back(getMetadataFromName("llvm.loop.unroll.disable"));
+  if (LC & LoopControlDependencyInfiniteMask)
+    Metadata.push_back(getMetadataFromName("llvm.loop.ivdep.enable"));
+  if (LC & LoopControlDependencyLengthMask) {
+    if (!LoopControlParameters.empty()) {
+      Metadata.push_back(llvm::MDNode::get(
+          *Context,
+          getMetadataFromNameAndParameter("llvm.loop.ivdep.safelen",
+                                          LoopControlParameters[NumParam])));
+      ++NumParam;
+      assert(NumParam <= LoopControlParameters.size() &&
+             "Missing loop control parameter!");
+    }
+  }
+  // Placeholder for LoopControls added in SPIR-V 1.4 spec (see 3.23)
+  if (LC & LoopControlMinIterationsMask) {
+    ++NumParam;
+    assert(NumParam <= LoopControlParameters.size() &&
+           "Missing loop control parameter!");
+  }
+  if (LC & LoopControlMaxIterationsMask) {
+    ++NumParam;
+    assert(NumParam <= LoopControlParameters.size() &&
+           "Missing loop control parameter!");
+  }
+  if (LC & LoopControlIterationMultipleMask) {
+    ++NumParam;
+    assert(NumParam <= LoopControlParameters.size() &&
+           "Missing loop control parameter!");
+  }
+  if (LC & LoopControlPeelCountMask) {
+    ++NumParam;
+    assert(NumParam <= LoopControlParameters.size() &&
+           "Missing loop control parameter!");
+  }
+  if (LC & LoopControlPartialCountMask && !(LC & LoopControlDontUnrollMask)) {
+    // If unroll factor is set as '1' - disable loop unrolling
+    if (1 == LoopControlParameters[NumParam])
+      Metadata.push_back(getMetadataFromName("llvm.loop.unroll.disable"));
+    else
+      Metadata.push_back(llvm::MDNode::get(
+          *Context,
+          getMetadataFromNameAndParameter("llvm.loop.unroll.count",
+                                          LoopControlParameters[NumParam])));
+    ++NumParam;
+    assert(NumParam <= LoopControlParameters.size() &&
+           "Missing loop control parameter!");
+  }
   llvm::MDNode *Node = llvm::MDNode::get(*Context, Metadata);
+
+  // Set the first operand to refer itself
   Node->replaceOperandWith(0, Node);
   BI->setMetadata("llvm.loop", Node);
 }
@@ -1261,8 +1333,11 @@ Value *SPIRVToLLVM::transValueWithoutDecoration(SPIRVValue *BV, Function *F,
     auto BR = static_cast<SPIRVBranch *>(BV);
     auto BI = BranchInst::Create(
         dyn_cast<BasicBlock>(transValue(BR->getTargetLabel(), F, BB)), BB);
-    if (auto LM = static_cast<SPIRVLoopMerge *>(BR->getPrevious()))
+    auto Prev = BR->getPrevious();
+    if (Prev && Prev->getOpCode() == OpLoopMerge) {
+      auto LM = static_cast<SPIRVLoopMerge *>(Prev);
       setLLVMLoopMetadata(LM, BI);
+    }
     return mapValue(BV, BI);
   }
 
@@ -1272,8 +1347,11 @@ Value *SPIRVToLLVM::transValueWithoutDecoration(SPIRVValue *BV, Function *F,
         dyn_cast<BasicBlock>(transValue(BR->getTrueLabel(), F, BB)),
         dyn_cast<BasicBlock>(transValue(BR->getFalseLabel(), F, BB)),
         transValue(BR->getCondition(), F, BB), BB);
-    if (auto LM = static_cast<SPIRVLoopMerge *>(BR->getPrevious()))
+    auto Prev = BR->getPrevious();
+    if (Prev && Prev->getOpCode() == OpLoopMerge) {
+      auto LM = static_cast<SPIRVLoopMerge *>(Prev);
       setLLVMLoopMetadata(LM, BC);
+    }
     return mapValue(BV, BC);
   }
 
@@ -1396,6 +1474,7 @@ Value *SPIRVToLLVM::transValueWithoutDecoration(SPIRVValue *BV, Function *F,
                                        BV->getName(), BB));
   }
 
+  case OpVmeImageINTEL:
   case OpLine:
   case OpSelectionMerge: // OpenCL Compiler does not use this instruction
   case OpLoopMerge: // Should be translated at OpBranch or OpBranchConditional
@@ -1579,10 +1658,6 @@ Value *SPIRVToLLVM::transValueWithoutDecoration(SPIRVValue *BV, Function *F,
       llvm_unreachable("Unknown extended instruction set!");
     }
   }
-  case OpControlBarrier:
-  case OpMemoryBarrier:
-    return mapValue(
-        BV, transOCLBarrierFence(static_cast<SPIRVInstruction *>(BV), BB));
 
   case OpSNegate: {
     SPIRVUnary *BC = static_cast<SPIRVUnary *>(BV);
@@ -1664,6 +1739,7 @@ Value *SPIRVToLLVM::transValueWithoutDecoration(SPIRVValue *BV, Function *F,
     if (isSPIRVCmpInstTransToLLVMInst(static_cast<SPIRVInstruction *>(BV))) {
       return mapValue(BV, transCmpInst(BV, BB, F));
     } else if ((OCLSPIRVBuiltinMap::rfind(OC, nullptr) ||
+                isSubgroupAvcINTELInstructionOpCode(OC) ||
                 isIntelSubgroupOpCode(OC)) &&
                !isAtomicOpCode(OC) && !isGroupOpCode(OC) && !isPipeOpCode(OC)) {
       return mapValue(
@@ -1788,6 +1864,54 @@ void SPIRVToLLVM::transOCLBuiltinFromInstPreproc(
   else if (OC == OpImageRead && Args.size() > 2) {
     // Drop "Image operands" argument
     Args.erase(Args.begin() + 2);
+  } else if (isSubgroupAvcINTELEvaluateOpcode(OC)) {
+    // There are three types of AVC Intel Evaluate opcodes:
+    // 1. With multi reference images - does not use OpVmeImageINTEL opcode for
+    // reference images
+    // 2. With dual reference images - uses two OpVmeImageINTEL opcodes for
+    // reference image
+    // 3. With single reference image - uses one OpVmeImageINTEL opcode for
+    // reference image
+    int NumImages =
+        std::count_if(Args.begin(), Args.end(), [](SPIRVValue *Arg) {
+          return static_cast<SPIRVInstruction *>(Arg)->getOpCode() ==
+                 OpVmeImageINTEL;
+        });
+    if (NumImages) {
+      SPIRVInstruction *SrcImage = static_cast<SPIRVInstruction *>(Args[0]);
+      assert(SrcImage &&
+             "Src image operand not found in avc evaluate instruction");
+      if (NumImages == 1) {
+        // Multi reference opcode - remove src image OpVmeImageINTEL opcode
+        // and replace it with corresponding OpImage and OpSampler arguments
+        bool IsInterlaced = (Args.size() == 4) ? true : false;
+        size_t SamplerPos = IsInterlaced ? 3 : 2;
+        Args.erase(Args.begin(), Args.begin() + 1);
+        Args.insert(Args.begin(), SrcImage->getOperands()[0]);
+        Args.insert(Args.begin() + SamplerPos, SrcImage->getOperands()[1]);
+      } else {
+        SPIRVInstruction *FwdRefImage =
+            static_cast<SPIRVInstruction *>(Args[1]);
+        SPIRVInstruction *BwdRefImage =
+            static_cast<SPIRVInstruction *>(Args[2]);
+        assert(FwdRefImage && "invalid avc evaluate instruction");
+        // Single reference opcode - remove src and ref image OpVmeImageINTEL
+        // opcodes and replace them with src and ref OpImage opcodes and
+        // OpSampler
+        Args.erase(Args.begin(), Args.begin() + NumImages);
+        // insert source OpImage and OpSampler
+        auto SrcOps = SrcImage->getOperands();
+        Args.insert(Args.begin(), SrcOps.begin(), SrcOps.end());
+        // insert reference OpImage
+        Args.insert(Args.begin() + 1, FwdRefImage->getOperands()[0]);
+        if (NumImages == 3) {
+          // Dual reference opcode - insert second reference OpImage argument
+          assert(BwdRefImage && "invalid avc evaluate instruction");
+          Args.insert(Args.begin() + 2, BwdRefImage->getOperands()[0]);
+        }
+      }
+    } else
+      llvm_unreachable("invalid avc instruction");
   }
 }
 
@@ -1846,7 +1970,8 @@ Instruction *SPIRVToLLVM::transEnqueueKernelBI(SPIRVInstruction *BI,
   Function *F = M->getFunction(FName);
   if (!F) {
     Type *EventTy = PointerType::get(
-        getOrCreateOpaquePtrType(M, SPIR_TYPE_NAME_CLK_EVENT_T, SPIRAS_Private),
+        getOrCreateOpaquePtrType(M, SPIR_TYPE_NAME_CLK_EVENT_T,
+                                 getOCLOpaqueTypeAddrSpace(OpTypeDeviceEvent)),
         SPIRAS_Generic);
 
     SmallVector<Type *, 8> Tys = {
@@ -2061,6 +2186,9 @@ std::string SPIRVToLLVM::getOCLBuiltinName(SPIRVInstruction *BI) {
     }
     return Name.str();
   }
+  if (isSubgroupAvcINTELInstructionOpCode(OC))
+    return OCLSPIRVSubgroupAVCIntelBuiltinMap::rmap(OC);
+
   auto Name = OCLSPIRVBuiltinMap::rmap(OC);
 
   SPIRVType *T = nullptr;
@@ -2500,138 +2628,6 @@ Instruction *SPIRVToLLVM::transOCLBuiltinFromExtInst(SPIRVExtInst *BC,
   return transOCLBuiltinPostproc(BC, Call, BB, UnmangledName);
 }
 
-CallInst *SPIRVToLLVM::transOCLBarrier(BasicBlock *BB, SPIRVWord ExecScope,
-                                       SPIRVWord MemSema, SPIRVWord MemScope) {
-  SPIRVWord Ver = 0;
-  BM->getSourceLanguage(&Ver);
-
-  Type *Int32Ty = Type::getInt32Ty(*Context);
-  Type *VoidTy = Type::getVoidTy(*Context);
-
-  std::string FuncName;
-  SmallVector<Type *, 2> ArgTy;
-  SmallVector<Value *, 2> Arg;
-
-  Constant *MemFenceFlags =
-      ConstantInt::get(Int32Ty, rmapBitMask<OCLMemFenceMap>(MemSema));
-
-  FuncName = (ExecScope == ScopeWorkgroup) ? kOCLBuiltinName::WorkGroupBarrier
-                                           : kOCLBuiltinName::SubGroupBarrier;
-
-  if (ExecScope == ScopeWorkgroup && Ver > 0 && Ver <= kOCLVer::CL12) {
-    FuncName = kOCLBuiltinName::Barrier;
-    ArgTy.push_back(Int32Ty);
-    Arg.push_back(MemFenceFlags);
-  } else {
-    Constant *Scope = ConstantInt::get(
-        Int32Ty, OCLMemScopeMap::rmap(static_cast<spv::Scope>(MemScope)));
-
-    ArgTy.append(2, Int32Ty);
-    Arg.push_back(MemFenceFlags);
-    Arg.push_back(Scope);
-  }
-
-  std::string MangledName;
-
-  mangleOpenClBuiltin(FuncName, ArgTy, MangledName);
-  Function *Func = M->getFunction(MangledName);
-  if (!Func) {
-    FunctionType *FT = FunctionType::get(VoidTy, ArgTy, false);
-    Func = Function::Create(FT, GlobalValue::ExternalLinkage, MangledName, M);
-    Func->setCallingConv(CallingConv::SPIR_FUNC);
-    if (isFuncNoUnwind())
-      Func->addFnAttr(Attribute::NoUnwind);
-    Func->addFnAttr(Attribute::NoDuplicate);
-  }
-
-  return CallInst::Create(Func, Arg, "", BB);
-}
-
-CallInst *SPIRVToLLVM::transOCLMemFence(BasicBlock *BB, SPIRVWord MemSema,
-                                        SPIRVWord MemScope) {
-  SPIRVWord Ver = 0;
-  BM->getSourceLanguage(&Ver);
-
-  Type *Int32Ty = Type::getInt32Ty(*Context);
-  Type *VoidTy = Type::getVoidTy(*Context);
-
-  std::string FuncName;
-  SmallVector<Type *, 3> ArgTy;
-  SmallVector<Value *, 3> Arg;
-
-  Constant *MemFenceFlags =
-      ConstantInt::get(Int32Ty, rmapBitMask<OCLMemFenceMap>(MemSema));
-
-  if (Ver > 0 && Ver <= kOCLVer::CL12) {
-    FuncName = kOCLBuiltinName::MemFence;
-    ArgTy.push_back(Int32Ty);
-    Arg.push_back(MemFenceFlags);
-  } else {
-    Constant *Order = ConstantInt::get(Int32Ty, mapSPIRVMemOrderToOCL(MemSema));
-
-    Constant *Scope = ConstantInt::get(
-        Int32Ty, OCLMemScopeMap::rmap(static_cast<spv::Scope>(MemScope)));
-
-    FuncName = kOCLBuiltinName::AtomicWorkItemFence;
-    ArgTy.append(3, Int32Ty);
-    Arg.push_back(MemFenceFlags);
-    Arg.push_back(Order);
-    Arg.push_back(Scope);
-  }
-
-  std::string MangledName;
-
-  mangleOpenClBuiltin(FuncName, ArgTy, MangledName);
-  Function *Func = M->getFunction(MangledName);
-  if (!Func) {
-    FunctionType *FT = FunctionType::get(VoidTy, ArgTy, false);
-    Func = Function::Create(FT, GlobalValue::ExternalLinkage, MangledName, M);
-    Func->setCallingConv(CallingConv::SPIR_FUNC);
-    if (isFuncNoUnwind())
-      Func->addFnAttr(Attribute::NoUnwind);
-  }
-
-  return CallInst::Create(Func, Arg, "", BB);
-}
-
-Instruction *SPIRVToLLVM::transOCLBarrierFence(SPIRVInstruction *MB,
-                                               BasicBlock *BB) {
-  assert(BB && "Invalid BB");
-  std::string FuncName;
-  auto GetIntVal = [](SPIRVValue *Value) {
-    return static_cast<SPIRVConstant *>(Value)->getZExtIntValue();
-  };
-
-  CallInst *Call = nullptr;
-
-  if (MB->getOpCode() == OpMemoryBarrier) {
-    auto MemB = static_cast<SPIRVMemoryBarrier *>(MB);
-
-    SPIRVWord MemScope = GetIntVal(MemB->getOpValue(0));
-    SPIRVWord MemSema = GetIntVal(MemB->getOpValue(1));
-
-    Call = transOCLMemFence(BB, MemSema, MemScope);
-  } else if (MB->getOpCode() == OpControlBarrier) {
-    auto CtlB = static_cast<SPIRVControlBarrier *>(MB);
-
-    SPIRVWord ExecScope = GetIntVal(CtlB->getExecScope());
-    SPIRVWord MemSema = GetIntVal(CtlB->getMemSemantic());
-    SPIRVWord MemScope = GetIntVal(CtlB->getMemScope());
-
-    Call = transOCLBarrier(BB, ExecScope, MemSema, MemScope);
-  } else {
-    llvm_unreachable("Invalid instruction");
-    return nullptr;
-  }
-
-  setName(Call, MB);
-  setAttrByCalledFunc(Call);
-  SPIRVDBG(spvdbgs() << "[transBarrier] " << *MB << " -> ";
-           dbgs() << *Call << '\n';)
-
-  return Call;
-}
-
 // SPIR-V only contains language version. Use OpenCL language version as
 // SPIR version.
 bool SPIRVToLLVM::transSourceLanguage() {
@@ -2808,11 +2804,16 @@ Instruction *SPIRVToLLVM::transOCLRelational(SPIRVInstruction *I,
 
 bool llvm::readSpirv(LLVMContext &C, std::istream &IS, Module *&M,
                      std::string &ErrMsg) {
-  M = new Module("", C);
   std::unique_ptr<SPIRVModule> BM(SPIRVModule::createSPIRVModule());
 
   IS >> *BM;
+  if (!BM->isModuleValid()) {
+    BM->getError(ErrMsg);
+    M = nullptr;
+    return false;
+  }
 
+  M = new Module("", C);
   SPIRVToLLVM BTL(M, BM.get());
   bool Succeed = true;
   if (!BTL.translate()) {
@@ -2820,8 +2821,7 @@ bool llvm::readSpirv(LLVMContext &C, std::istream &IS, Module *&M,
     Succeed = false;
   }
   llvm::legacy::PassManager PassMgr;
-  PassMgr.add(createSPIRVToOCL20());
-  PassMgr.add(createOCL20To12());
+  PassMgr.add(createSPIRVToOCL(*M));
   PassMgr.run(*M);
 
   if (DbgSaveTmpLLVM)

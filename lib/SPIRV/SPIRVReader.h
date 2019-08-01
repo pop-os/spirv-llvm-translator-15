@@ -45,6 +45,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/GlobalValue.h" // llvm::GlobalValue::LinkageTypes
+#include "llvm/IR/Metadata.h"    // llvm::Metadata
 
 namespace llvm {
 class Module;
@@ -111,7 +112,6 @@ public:
                                     SPIRVInstruction *BI, BasicBlock *BB);
   Instruction *transOCLBuiltinFromInst(SPIRVInstruction *BI, BasicBlock *BB);
   Instruction *transSPIRVBuiltinFromInst(SPIRVInstruction *BI, BasicBlock *BB);
-  Instruction *transOCLBarrierFence(SPIRVInstruction *BI, BasicBlock *BB);
   void transOCLVectorLoadStore(std::string &UnmangledName,
                                std::vector<SPIRVWord> &BArgs);
 
@@ -247,6 +247,9 @@ private:
   Value *oclTransConstantPipeStorage(SPIRV::SPIRVConstantPipeStorage *BCPS);
   void setName(llvm::Value *V, SPIRVValue *BV);
   void setLLVMLoopMetadata(SPIRVLoopMerge *LM, BranchInst *BI);
+  inline llvm::Metadata *getMetadataFromName(std::string Name);
+  inline std::vector<llvm::Metadata *>
+  getMetadataFromNameAndParameter(std::string Name, SPIRVWord Parameter);
   void insertImageNameAccessQualifier(SPIRV::SPIRVTypeImage *ST,
                                       std::string &Name);
   template <class Source, class Func> bool foreachFuncCtlMask(Source, Func);
@@ -254,11 +257,6 @@ private:
   Instruction *transOCLAllAny(SPIRVInstruction *BI, BasicBlock *BB);
   Instruction *transOCLRelational(SPIRVInstruction *BI, BasicBlock *BB);
 
-  CallInst *transOCLBarrier(BasicBlock *BB, SPIRVWord ExecScope,
-                            SPIRVWord MemSema, SPIRVWord MemScope);
-
-  CallInst *transOCLMemFence(BasicBlock *BB, SPIRVWord MemSema,
-                             SPIRVWord MemScope);
 }; // class SPIRVToLLVM
 
 } // namespace SPIRV

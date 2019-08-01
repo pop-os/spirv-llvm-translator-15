@@ -701,6 +701,7 @@ CallInst *addCallInst(Module *M, StringRef FuncName, Type *RetTy,
   // Cannot assign a Name to void typed values
   auto CI = CallInst::Create(F, Args, RetTy->isVoidTy() ? "" : InstName, Pos);
   CI->setCallingConv(F->getCallingConv());
+  CI->setAttributes(F->getAttributes());
   return CI;
 }
 
@@ -972,6 +973,31 @@ SPIR::TypePrimitiveEnum getOCLTypePrimitiveEnum(StringRef TyName) {
       .Case("opencl.clk_event_t", SPIR::PRIMITIVE_CLK_EVENT_T)
       .Case("opencl.sampler_t", SPIR::PRIMITIVE_SAMPLER_T)
       .Case("struct.ndrange_t", SPIR::PRIMITIVE_NDRANGE_T)
+      .Case("opencl.intel_sub_group_avc_mce_payload_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_MCE_PAYLOAD_T)
+      .Case("opencl.intel_sub_group_avc_ime_payload_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_IME_PAYLOAD_T)
+      .Case("opencl.intel_sub_group_avc_ref_payload_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_REF_PAYLOAD_T)
+      .Case("opencl.intel_sub_group_avc_sic_payload_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_SIC_PAYLOAD_T)
+      .Case("opencl.intel_sub_group_avc_mce_result_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_MCE_RESULT_T)
+      .Case("opencl.intel_sub_group_avc_ime_result_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_IME_RESULT_T)
+      .Case("opencl.intel_sub_group_avc_ref_result_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_REF_RESULT_T)
+      .Case("opencl.intel_sub_group_avc_sic_result_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_SIC_RESULT_T)
+      .Case(
+          "opencl.intel_sub_group_avc_ime_result_single_reference_streamout_t",
+          SPIR::PRIMITIVE_SUB_GROUP_AVC_IME_SINGLE_REF_STREAMOUT_T)
+      .Case("opencl.intel_sub_group_avc_ime_result_dual_reference_streamout_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_IME_DUAL_REF_STREAMOUT_T)
+      .Case("opencl.intel_sub_group_avc_ime_single_reference_streamin_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_IME_SINGLE_REF_STREAMIN_T)
+      .Case("opencl.intel_sub_group_avc_ime_dual_reference_streamin_t",
+            SPIR::PRIMITIVE_SUB_GROUP_AVC_IME_DUAL_REF_STREAMIN_T)
       .Default(SPIR::PRIMITIVE_NONE);
 }
 /// Translates LLVM type to descriptor for mangler.
@@ -1493,17 +1519,38 @@ spv::LoopControlMask getLoopControl(const BranchInst *Branch,
   MDNode *LoopMD = Branch->getMetadata("llvm.loop");
   if (!LoopMD)
     return spv::LoopControlMaskNone;
+
+  size_t LoopControl = spv::LoopControlMaskNone;
   for (const MDOperand &MDOp : LoopMD->operands()) {
     if (MDNode *Node = dyn_cast<MDNode>(MDOp)) {
       std::string S = getMDOperandAsString(Node, 0);
+      // Set the loop control bits. Parameters are set in the order described
+      // in 3.23 SPIR-V Spec. rev. 1.4:
+      // Bits that are set can indicate whether an additional operand follows,
+      // as described by the table. If there are multiple following operands
+      // indicated, they are ordered: Those indicated by smaller-numbered bits
+      // appear first.
       if (S == "llvm.loop.unroll.disable")
-        return spv::LoopControlDontUnrollMask;
-      // TODO Express partial unrolling in SPIRV.
-      if (S == "llvm.loop.unroll.count" || S == "llvm.loop.unroll.full")
-        return spv::LoopControlUnrollMask;
+        LoopControl |= spv::LoopControlDontUnrollMask;
+      else if (S == "llvm.loop.unroll.full" || S == "llvm.loop.unroll.enable")
+        LoopControl |= spv::LoopControlUnrollMask;
+      if (S == "llvm.loop.ivdep.enable")
+        LoopControl |= spv::LoopControlDependencyInfiniteMask;
+      if (S == "llvm.loop.ivdep.safelen") {
+        size_t I = getMDOperandAsInt(Node, 1);
+        Parameters.push_back(I);
+        LoopControl |= spv::LoopControlDependencyLengthMask;
+      }
+      // PartialCount must not be used with the DontUnroll bit
+      if (S == "llvm.loop.unroll.count" &&
+          !(LoopControl & LoopControlDontUnrollMask)) {
+        size_t I = getMDOperandAsInt(Node, 1);
+        Parameters.push_back(I);
+        LoopControl |= spv::LoopControlPartialCountMask;
+      }
     }
   }
-  return spv::LoopControlMaskNone;
+  return static_cast<spv::LoopControlMask>(LoopControl);
 }
 
 } // namespace SPIRV

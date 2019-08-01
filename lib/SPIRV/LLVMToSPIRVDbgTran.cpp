@@ -84,12 +84,9 @@ void LLVMToSPIRVDbgTran::transDebugMetadata() {
 SPIRVValue *
 LLVMToSPIRVDbgTran::createDebugDeclarePlaceholder(const DbgDeclareInst *DbgDecl,
                                                   SPIRVBasicBlock *BB) {
-  if (!DbgDecl->getAddress())
-    return nullptr; // The variable is dead.
-
   DbgDeclareIntrinsics.push_back(DbgDecl);
   using namespace SPIRVDebug::Operand::DebugDeclare;
-  SPIRVWordVec Ops(OperandCount, getDebugInfoNone()->getId());
+  SPIRVWordVec Ops(OperandCount, getDebugInfoNoneId());
   SPIRVId ExtSetId = BM->getExtInstSetId(SPIRVEIS_Debug);
   return BM->addExtInst(getVoidTy(), ExtSetId, SPIRVDebug::Declare, Ops, BB);
 }
@@ -108,7 +105,8 @@ void LLVMToSPIRVDbgTran::finalizeDebugDeclare(const DbgDeclareInst *DbgDecl) {
   using namespace SPIRVDebug::Operand::DebugDeclare;
   SPIRVWordVec Ops(OperandCount);
   Ops[DebugLocalVarIdx] = transDbgEntry(DbgDecl->getVariable())->getId();
-  Ops[VariableIdx] = SPIRVWriter->transValue(Alloca, BB)->getId();
+  Ops[VariableIdx] = Alloca ? SPIRVWriter->transValue(Alloca, BB)->getId()
+                            : getDebugInfoNoneId();
   Ops[ExpressionIdx] = transDbgEntry(DbgDecl->getExpression())->getId();
   DD->setArguments(Ops);
 }
@@ -350,6 +348,18 @@ SPIRVEntry *LLVMToSPIRVDbgTran::getScope(DIScope *S) {
     assert(SPIRVCU && "Compile unit is expected to be already translated");
     return SPIRVCU;
   }
+}
+
+SPIRVEntry *LLVMToSPIRVDbgTran::getGlobalVariable(const DIGlobalVariable *GV) {
+  for (GlobalVariable &V : M->globals()) {
+    SmallVector<DIGlobalVariableExpression *, 4> GVs;
+    V.getDebugInfo(GVs);
+    for (DIGlobalVariableExpression *GVE : GVs) {
+      if (GVE->getVariable() == GV)
+        return SPIRVWriter->transValue(&V, nullptr);
+    }
+  }
+  return getDebugInfoNone();
 }
 
 SPIRVWord mapDebugFlags(DINode::DIFlags DFlags) {
@@ -758,20 +768,15 @@ LLVMToSPIRVDbgTran::transDbgGlobalVariable(const DIGlobalVariable *GV) {
   if (Context && (isa<DINamespace>(Context) || isa<DISubprogram>(Context)))
     Parent = transDbgEntry(Context);
   Ops[ParentIdx] = Parent->getId();
+
   Ops[LinkageNameIdx] = BM->getString(GV->getLinkageName())->getId();
-
-  // Variable
-  SPIRVEntry *Var = getDebugInfoNone();
-  llvm::GlobalVariable *V = M->getGlobalVariable(GV->getName());
-  if (!V)
-    V = M->getGlobalVariable(GV->getLinkageName());
-  if (V)
-    Var = SPIRVWriter->transValue(V, nullptr);
-  Ops[VariableIdx] = Var->getId();
-
+  Ops[VariableIdx] = getGlobalVariable(GV)->getId();
   Ops[FlagsIdx] = transDebugFlags(GV);
+
+  // Check if GV is the definition of previously declared static member
   if (DIDerivedType *StaticMember = GV->getStaticDataMemberDeclaration())
     Ops.push_back(transDbgEntry(StaticMember)->getId());
+
   return BM->addDebugInfo(SPIRVDebug::GlobalVariable, getVoidTy(), Ops);
 }
 

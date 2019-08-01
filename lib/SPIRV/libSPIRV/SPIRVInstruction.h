@@ -1035,6 +1035,9 @@ public:
   SPIRVId getMergeBlock() { return MergeBlock; }
   SPIRVId getContinueTarget() { return ContinueTarget; }
   SPIRVWord getLoopControl() { return LoopControl; }
+  std::vector<SPIRVWord> getLoopControlParameters() {
+    return LoopControlParameters;
+  }
 
   void setWordCount(SPIRVWord TheWordCount) override {
     SPIRVEntry::setWordCount(TheWordCount);
@@ -2245,6 +2248,10 @@ class SPIRVSubgroupAVCIntelInstBase : public SPIRVInstTemplateBase {
 protected:
   SPIRVCapVec getRequiredCapability() const override {
     return getVec(CapabilitySubgroupAvcMotionEstimationINTEL);
+  }
+
+  SPIRVExtSet getRequiredExtensions() const override {
+    return getSet(SPV_INTEL_device_side_avc_motion_estimation);
   }
 };
 
