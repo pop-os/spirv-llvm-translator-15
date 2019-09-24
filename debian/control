@@ -5,13 +5,15 @@ Maintainer: Debian OpenCL team <pkg-opencl-devel@lists.alioth.debian.org>
 Uploaders: Timo Aaltonen <tjaalton@debian.org>
 Build-Depends: debhelper (>= 11),
  cmake,
- llvm-8-dev,
+ libclang-9-dev,
+ lldb-9,
+ llvm-9-dev,
 Standards-Version: 4.3.0
 Homepage: https://github.com/KhronosGroup/SPIRV-LLVM-Translator
 Vcs-Browser: https://salsa.debian.org/opencl-team/spirv-llvm-translator
 Vcs-Git: https://salsa.debian.org/opencl-team/spirv-llvm-translator.git
 
-Package: libllvmspirvlib8
+Package: libllvmspirvlib9
 Architecture: any
 Depends:
  ${shlibs:Depends},
@@ -26,7 +28,7 @@ Description: bi-directional translator for LLVM/SPIRV -- shared library
 Package: libllvmspirvlib-dev
 Architecture: any
 Depends:
- libllvmspirvlib8 (= ${binary:Version}),
+ libllvmspirvlib9 (= ${binary:Version}),
  ${misc:Depends}
 Description: bi-directional translator for LLVM/SPIRV -- development files
  SPIRV-LLVM-translator is a LLVM/SPIRV bi-directional translator. This
@@ -38,7 +40,7 @@ Description: bi-directional translator for LLVM/SPIRV -- development files
 Package: llvm-spirv
 Architecture: any
 Depends:
- libllvmspirvlib8 (= ${binary:Version}),
+ libllvmspirvlib9 (= ${binary:Version}),
  ${shlibs:Depends},
  ${misc:Depends}
 Description: bi-directional translator for LLVM/SPIRV
