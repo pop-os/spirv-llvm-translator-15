@@ -3,6 +3,7 @@ spirv-llvm-translator (9.0.0-1) UNRELEASED; urgency=medium
   * New upstream release.
   * d/copyright: spirv.hpp is Expat.
   * Build with llvm-9.
+  * patches: Dropped the only patch, applied upstream.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Fri, 06 Sep 2019 00:04:36 +0300
 
