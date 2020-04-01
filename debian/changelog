@@ -1,6 +1,7 @@
 spirv-llvm-translator (10.0.0-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * watch: Updated.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 01 Apr 2020 20:27:25 +0300
 
