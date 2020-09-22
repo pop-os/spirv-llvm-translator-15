@@ -1,0 +1,55 @@
+spirv-llvm-translator (10.0.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * watch: Updated.
+  * Build against llvm-10.
+  * control: Use debhelper-compat, bump to 12.
+  * control: Bump policy to 4.5.0.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 01 Apr 2020 20:44:04 +0300
+
+spirv-llvm-translator (9.0.0-1) unstable; urgency=medium
+
+  * New upstream release.
+  * d/copyright: spirv.hpp is Expat.
+  * Build with llvm-9.
+  * patches: Dropped the only patch, applied upstream.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 24 Sep 2019 12:04:15 +0300
+
+spirv-llvm-translator (8.0.1-1) unstable; urgency=medium
+
+  * New upstream release.
+  * rules: Set build type as 'Release'.
+  * debian/patches: Refreshed.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 01 Aug 2019 10:06:44 +0300
+
+spirv-llvm-translator (8.0.0+git20190314-1) experimental; urgency=medium
+
+  * New upstream snapshot.
+  * Build a shared library.
+  * Package llvm-spirv.
+  * Add patch to support clang block syntax.
+  * rules: Drop rpath.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 20 Mar 2019 17:24:46 +0200
+
+spirv-llvm-translator (8.0.0-3) experimental; urgency=medium
+
+  * rules: Rebuild the archive index after stripping.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 15 Mar 2019 09:23:42 +0200
+
+spirv-llvm-translator (8.0.0-2) experimental; urgency=medium
+
+  * rules: Build with -fPIC.
+  * rules: Strip the library.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 14 Mar 2019 23:53:32 +0200
+
+spirv-llvm-translator (8.0.0-1) experimental; urgency=medium
+
+  * Initial release (Closes: #921422)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 06 Feb 2019 01:40:18 +0200
