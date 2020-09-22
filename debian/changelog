@@ -1,6 +1,7 @@
 spirv-llvm-translator (11.0~git20200922-1) UNRELEASED; urgency=medium
 
   * New upstream snapshot.
+  * Build against llvm-11.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 22 Sep 2020 19:33:44 +0300
 
