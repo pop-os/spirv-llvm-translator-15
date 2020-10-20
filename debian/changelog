@@ -1,9 +1,9 @@
-spirv-llvm-translator (11.0.0-1) UNRELEASED; urgency=medium
+spirv-llvm-translator (11.0.0-1) unstable; urgency=medium
 
   * New upstream release.
   * control: Mark -dev as M-A: same.
 
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 20 Oct 2020 11:19:33 +0300
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 20 Oct 2020 11:24:57 +0300
 
 spirv-llvm-translator (11.0~git20200922-1) unstable; urgency=medium
 
