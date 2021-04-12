@@ -5,15 +5,15 @@ Maintainer: Debian OpenCL team <pkg-opencl-devel@lists.alioth.debian.org>
 Uploaders: Timo Aaltonen <tjaalton@debian.org>
 Build-Depends: debhelper-compat (= 12),
  cmake,
- libclang-11-dev,
- lldb-11,
- llvm-11-dev,
+ libclang-12-dev,
+ lldb-12,
+ llvm-12-dev,
 Standards-Version: 4.5.0
 Homepage: https://github.com/KhronosGroup/SPIRV-LLVM-Translator
 Vcs-Browser: https://salsa.debian.org/opencl-team/spirv-llvm-translator
 Vcs-Git: https://salsa.debian.org/opencl-team/spirv-llvm-translator.git
 
-Package: libllvmspirvlib11
+Package: libllvmspirvlib12
 Architecture: any
 Depends:
  ${shlibs:Depends},
@@ -41,7 +41,7 @@ Description: bi-directional translator for LLVM/SPIRV -- development files
 Package: llvm-spirv
 Architecture: any
 Depends:
- libllvmspirvlib11 (= ${binary:Version}),
+ libllvmspirvlib12 (= ${binary:Version}),
  ${shlibs:Depends},
  ${misc:Depends}
 Description: bi-directional translator for LLVM/SPIRV
