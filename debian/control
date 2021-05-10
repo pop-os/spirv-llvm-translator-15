@@ -28,7 +28,7 @@ Description: bi-directional translator for LLVM/SPIRV -- shared library
 Package: libllvmspirvlib-dev
 Architecture: any
 Depends:
- libllvmspirvlib11 (= ${binary:Version}),
+ libllvmspirvlib12 (= ${binary:Version}),
  ${misc:Depends}
 Multi-Arch: same
 Description: bi-directional translator for LLVM/SPIRV -- development files
