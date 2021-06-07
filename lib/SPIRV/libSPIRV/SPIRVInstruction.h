@@ -298,35 +298,23 @@ public:
                                : getValue(Ops[I]);
   }
 
-  // Get the offset of operands.
-  // Some instructions skip literals when returning operands.
-  size_t getOperandOffset() const {
-    if (hasExecScope() && !isGroupOpCode(OpCode) && !isPipeOpCode(OpCode))
-      return 1;
-    return 0;
-  }
-
-  // Get operands which are values.
-  // Drop execution scope and group operation literals.
-  // Return other literals as uint32 constants.
   std::vector<SPIRVValue *> getOperands() override {
     std::vector<SPIRVValue *> VOps;
-    auto Offset = getOperandOffset();
-    for (size_t I = 0, E = Ops.size() - Offset; I != E; ++I)
+    for (size_t I = 0, E = Ops.size(); I != E; ++I)
       VOps.push_back(getOperand(I));
     return VOps;
   }
 
   std::vector<SPIRVEntry *> getNonLiteralOperands() const override {
     std::vector<SPIRVEntry *> Operands;
-    for (size_t I = getOperandOffset(), E = Ops.size(); I < E; ++I)
+    for (size_t I = 0, E = Ops.size(); I < E; ++I)
       if (!isOperandLiteral(I))
         Operands.push_back(getEntry(Ops[I]));
     return Operands;
   }
 
   virtual SPIRVValue *getOperand(unsigned I) {
-    return getOpValue(I + getOperandOffset());
+    return getOpValue(I);
   }
 
   bool hasExecScope() const { return SPIRV::hasExecScope(OpCode); }
@@ -1877,6 +1865,23 @@ public:
       return Index == 3;
     }
   }
+  std::vector<SPIRVValue *> getArgValues() {
+    std::vector<SPIRVValue *> VArgs;
+    for (size_t I = 0; I < Args.size(); ++I) {
+      if (isOperandLiteral(I))
+        VArgs.push_back(Module->getLiteralAsConstant(Args[I]));
+      else
+        VArgs.push_back(getValue(Args[I]));
+    }
+    return VArgs;
+  }
+  std::vector<SPIRVType *> getArgTypes() {
+    std::vector<SPIRVType *> ArgTypes;
+    auto VArgs = getArgValues();
+    for (auto VArg : VArgs)
+      ArgTypes.push_back(VArg->getType());
+    return ArgTypes;
+  }
 
 protected:
   SPIRVExtInstSetKind ExtSetKind;
@@ -2379,6 +2384,7 @@ public:
   SPIRVValue *getEvent() const { return getValue(Event); }
   std::vector<SPIRVValue *> getOperands() override {
     std::vector<SPIRVId> Operands;
+    Operands.push_back(ExecScope);
     Operands.push_back(Destination);
     Operands.push_back(Source);
     Operands.push_back(NumElements);

@@ -98,9 +98,40 @@ public:
   ///  intel_sub_group_media_block_write
   void visitCallSPIRVImageMediaBlockBuiltin(CallInst *CI, Op OC);
 
+  /// Transform __spirv_*Convert_R{ReturnType}{_sat}{_rtp|_rtn|_rtz|_rte} to
+  /// convert_{ReturnType}_{sat}{_rtp|_rtn|_rtz|_rte}
+  /// example:  <2 x i8> __spirv_SatConvertUToS(<2 x i32>) =>
+  ///   convert_uchar2_sat(int2)
+  void visitCallSPIRVCvtBuiltin(CallInst *CI, Op OC, StringRef DemangledName);
+
+  /// Transform
+  ///   __spirv_AsyncGroupCopy(ScopeWorkGroup, dst, src, n, stride, event)
+  ///   => async_work_group_strided_copy(dst, src, n, stride, event)
+  void visitCallAsyncWorkGroupCopy(CallInst *CI, Op OC);
+
+  /// Transform __spirv_GroupWaitEvents(Scope, NumEvents, EventsList)
+  ///   => wait_group_events(NumEvents, EventsList)
+  void visitCallGroupWaitEvents(CallInst *CI, Op OC);
+
+  /// Transform __spirv_ImageSampleExplicitLod__{ReturnType} to read_imade
+  void visitCallSPIRVImageSampleExplicitLodBuiltIn(CallInst *CI, Op OC);
+
   /// Transform __spirv_* builtins to OCL 2.0 builtins.
   /// No change with arguments.
   void visitCallSPIRVBuiltin(CallInst *CI, Op OC);
+
+  /// Transform __spirv_ocl* instructions (OpenCL Extended Instruction Set)
+  /// to OpenCL builtins.
+  void visitCallSPIRVOCLExt(CallInst *CI, OCLExtOpKind Kind);
+
+  /// Transform __spirv_ocl_vstore* to corresponding vstore OpenCL instruction
+  void visitCallSPIRVVStore(CallInst *CI, OCLExtOpKind Kind);
+
+  /// Transform __spirv_ocl_vloadn to OpenCL vload[2|4|8|16]
+  void visitCallSPIRVVLoadn(CallInst *CI, OCLExtOpKind Kind);
+
+  /// Transform __spirv_ocl_printf to (i8 addrspace(2)*, ...) @printf
+  void visitCallSPIRVPrintf(CallInst *CI, OCLExtOpKind Kind);
 
   /// Get prefix work_/sub_ for OCL group builtin functions.
   /// Assuming the first argument of \param CI is a constant integer for

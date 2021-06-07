@@ -52,6 +52,14 @@ using namespace SPIRVDebug::Operand;
 
 namespace SPIRV {
 
+static uint64_t getDerivedSizeInBits(const DIType *Ty) {
+  if (auto Size = Ty->getSizeInBits())
+    return Size;
+  if (auto *DT = llvm::dyn_cast<const llvm::DIDerivedType>(Ty))
+    if (auto *BT = llvm::dyn_cast<const llvm::DIType>(DT->getRawBaseType()))
+      return getDerivedSizeInBits(BT);
+  return 0;
+}
 SPIRVToLLVMDbgTran::SPIRVToLLVMDbgTran(SPIRVModule *TBM, Module *TM,
                                        SPIRVToLLVM *Reader)
     : BM(TBM), M(TM), Builder(*M), SPIRVReader(Reader) {
@@ -119,7 +127,8 @@ SPIRVToLLVMDbgTran::transCompileUnit(const SPIRVExtInst *DebugInst) {
   SPIRVId FileId = Source->getArguments()[SPIRVDebug::Operand::Source::FileIdx];
   std::string File = getString(FileId);
   unsigned SourceLang = Ops[LanguageIdx];
-  CU = Builder.createCompileUnit(SourceLang, getDIFile(File), "spirv", false,
+  auto Producer = findModuleProducer();
+  CU = Builder.createCompileUnit(SourceLang, getDIFile(File), Producer, false,
                                  "", 0);
   return CU;
 }
@@ -197,7 +206,7 @@ SPIRVToLLVMDbgTran::transTypeArray(const SPIRVExtInst *DebugInst) {
     TotalCount *= static_cast<uint64_t>(Count);
   }
   DINodeArray SubscriptArray = Builder.getOrCreateArray(Subscripts);
-  size_t Size = BaseTy->getSizeInBits() * TotalCount;
+  size_t Size = getDerivedSizeInBits(BaseTy) * TotalCount;
   return Builder.createArrayType(Size, 0 /*align*/, BaseTy, SubscriptArray);
 }
 
@@ -209,7 +218,7 @@ SPIRVToLLVMDbgTran::transTypeVector(const SPIRVExtInst *DebugInst) {
   DIType *BaseTy =
       transDebugInst<DIType>(BM->get<SPIRVExtInst>(Ops[BaseTypeIdx]));
   SPIRVWord Count = Ops[ComponentCountIdx];
-  uint64_t Size = BaseTy->getSizeInBits() * Count;
+  uint64_t Size = getDerivedSizeInBits(BaseTy) * Count;
 
   SmallVector<llvm::Metadata *, 8> Subscripts;
   Subscripts.push_back(Builder.getOrCreateSubrange(0, Count));
@@ -998,6 +1007,16 @@ SPIRVToLLVMDbgTran::SplitFileName::SplitFileName(const string &FileName) {
     BaseName = FileName;
     Path = ".";
   }
+}
+
+std::string SPIRVToLLVMDbgTran::findModuleProducer() {
+  for (const auto &I : BM->getModuleProcessedVec()) {
+    if (I->getProcessStr().find(SPIRVDebug::ProducerPrefix) !=
+        std::string::npos) {
+      return I->getProcessStr().substr(SPIRVDebug::ProducerPrefix.size());
+    }
+  }
+  return "spirv";
 }
 
 } // namespace SPIRV

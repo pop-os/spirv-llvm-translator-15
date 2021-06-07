@@ -53,6 +53,32 @@ void SPIRVToOCL::visitCallInst(CallInst &CI) {
   if (!F)
     return;
 
+  OCLExtOpKind ExtOp;
+  if (isSPIRVOCLExtInst(&CI, &ExtOp)) {
+    switch (ExtOp) {
+    case OpenCLLIB::Vloadn:
+    case OpenCLLIB::Vloada_halfn:
+    case OpenCLLIB::Vload_halfn:
+      visitCallSPIRVVLoadn(&CI, ExtOp);
+      break;
+    case OpenCLLIB::Vstoren:
+    case OpenCLLIB::Vstore_halfn:
+    case OpenCLLIB::Vstorea_halfn:
+    case OpenCLLIB::Vstore_half_r:
+    case OpenCLLIB::Vstore_halfn_r:
+    case OpenCLLIB::Vstorea_halfn_r:
+      visitCallSPIRVVStore(&CI, ExtOp);
+      break;
+    case OpenCLLIB::Printf:
+      visitCallSPIRVPrintf(&CI, ExtOp);
+      break;
+    default:
+      visitCallSPIRVOCLExt(&CI, ExtOp);
+      break;
+    }
+    return;
+  }
+
   auto MangledName = F->getName();
   StringRef DemangledName;
   Op OC = OpNop;
@@ -87,6 +113,22 @@ void SPIRVToOCL::visitCallInst(CallInst &CI) {
   }
   if (isMediaBlockINTELOpcode(OC)) {
     visitCallSPIRVImageMediaBlockBuiltin(&CI, OC);
+    return;
+  }
+  if (isCvtOpCode(OC)) {
+    visitCallSPIRVCvtBuiltin(&CI, OC, DemangledName);
+    return;
+  }
+  if (OC == OpGroupAsyncCopy) {
+    visitCallAsyncWorkGroupCopy(&CI, OC);
+    return;
+  }
+  if (OC == OpGroupWaitEvents) {
+    visitCallGroupWaitEvents(&CI, OC);
+    return;
+  }
+  if (OC == OpImageSampleExplicitLod) {
+    visitCallSPIRVImageSampleExplicitLodBuiltIn(&CI, OC);
     return;
   }
   if (OCLSPIRVBuiltinMap::rfind(OC))
@@ -498,6 +540,130 @@ void SPIRVToOCL::visitCallSPIRVImageMediaBlockBuiltin(CallInst *CI, Op OC) {
       &Attrs);
 }
 
+void SPIRVToOCL::visitCallSPIRVCvtBuiltin(CallInst *CI, Op OC,
+                                          StringRef DemangledName) {
+  AttributeList Attrs = CI->getCalledFunction()->getAttributes();
+  mutateCallInstOCL(
+      M, CI,
+      [=](CallInst *Call, std::vector<Value *> &Args) {
+        std::string CastBuiltInName;
+        if (isCvtFromUnsignedOpCode(OC))
+          CastBuiltInName = "u";
+        CastBuiltInName += kOCLBuiltinName::ConvertPrefix;
+        Type *DstTy = Call->getType();
+        CastBuiltInName +=
+            mapLLVMTypeToOCLType(DstTy, !isCvtToUnsignedOpCode(OC));
+        if (DemangledName.find("_sat") != StringRef::npos || isSatCvtOpCode(OC))
+          CastBuiltInName += "_sat";
+        Value *Src = Call->getOperand(0);
+        assert(Src && "Invalid SPIRV convert builtin call");
+        Type *SrcTy = Src->getType();
+        auto Loc = DemangledName.find("_rt");
+        if (Loc != StringRef::npos &&
+            !(isa<IntegerType>(SrcTy) && isa<IntegerType>(DstTy)))
+          CastBuiltInName += DemangledName.substr(Loc, 4).str();
+        return CastBuiltInName;
+      },
+      &Attrs);
+}
+
+void SPIRVToOCL::visitCallAsyncWorkGroupCopy(CallInst *CI, Op OC) {
+  AttributeList Attrs = CI->getCalledFunction()->getAttributes();
+  mutateCallInstOCL(
+      M, CI,
+      [=](CallInst *, std::vector<Value *> &Args) {
+        // First argument of AsyncWorkGroupCopy instruction is Scope, OCL
+        // built-in async_work_group_strided_copy doesn't have this argument
+        Args.erase(Args.begin());
+        return OCLSPIRVBuiltinMap::rmap(OC);
+      },
+      &Attrs);
+}
+
+void SPIRVToOCL::visitCallGroupWaitEvents(CallInst *CI, Op OC) {
+  AttributeList Attrs = CI->getCalledFunction()->getAttributes();
+  mutateCallInstOCL(
+      M, CI,
+      [=](CallInst *, std::vector<Value *> &Args) {
+        // First argument of GroupWaitEvents instruction is Scope, OCL
+        // built-in wait_group_events doesn't have this argument
+        Args.erase(Args.begin());
+        return OCLSPIRVBuiltinMap::rmap(OC);
+      },
+      &Attrs);
+}
+
+static char getTypeSuffix(Type *T) {
+  char Suffix;
+
+  Type *ST = T->getScalarType();
+  if (ST->isHalfTy())
+    Suffix = 'h';
+  else if (ST->isFloatTy())
+    Suffix = 'f';
+  else
+    Suffix = 'i';
+
+  return Suffix;
+}
+
+// TODO: Handle unsigned integer return type. May need spec change.
+void SPIRVToOCL::visitCallSPIRVImageSampleExplicitLodBuiltIn(CallInst *CI,
+                                                             Op OC) {
+  assert(CI->getCalledFunction() && "Unexpected indirect call");
+  AttributeList Attrs = CI->getCalledFunction()->getAttributes();
+  StringRef ImageTypeName;
+  bool IsDepthImage = false;
+  if (isOCLImageType(
+          (cast<CallInst>(CI->getOperand(0)))->getArgOperand(0)->getType(),
+          &ImageTypeName))
+    IsDepthImage = ImageTypeName.contains("_depth_");
+
+  auto ModifyArguments = [=](CallInst *, std::vector<Value *> &Args,
+                             llvm::Type *&RetTy) {
+    CallInst *CallSampledImg = cast<CallInst>(Args[0]);
+    auto Img = CallSampledImg->getArgOperand(0);
+    assert(isOCLImageType(Img->getType()));
+    auto Sampler = CallSampledImg->getArgOperand(1);
+    Args[0] = Img;
+    Args.insert(Args.begin() + 1, Sampler);
+    if (Args.size() > 4) {
+      ConstantInt *ImOp = dyn_cast<ConstantInt>(Args[3]);
+      ConstantFP *LodVal = dyn_cast<ConstantFP>(Args[4]);
+      // Drop "Image Operands" argument.
+      Args.erase(Args.begin() + 3, Args.begin() + 4);
+      // If the image operand is LOD and its value is zero, drop it too.
+      if (ImOp && LodVal && LodVal->isNullValue() &&
+          ImOp->getZExtValue() == ImageOperandsMask::ImageOperandsLodMask)
+        Args.erase(Args.begin() + 3, Args.end());
+    }
+    if (CallSampledImg->hasOneUse()) {
+      CallSampledImg->replaceAllUsesWith(
+          UndefValue::get(CallSampledImg->getType()));
+      CallSampledImg->dropAllReferences();
+      CallSampledImg->eraseFromParent();
+    }
+    Type *T = CI->getType();
+    if (auto VT = dyn_cast<VectorType>(T))
+      T = VT->getElementType();
+    RetTy = IsDepthImage ? T : CI->getType();
+    return std::string(kOCLBuiltinName::SampledReadImage) + getTypeSuffix(T);
+  };
+
+  auto ModifyRetTy = [=](CallInst *NewCI) -> Instruction * {
+    if (IsDepthImage) {
+      auto Ins = InsertElementInst::Create(
+          UndefValue::get(FixedVectorType::get(NewCI->getType(), 4)), NewCI,
+          getSizet(M, 0));
+      Ins->insertAfter(NewCI);
+      return Ins;
+    }
+    return NewCI;
+  };
+
+  mutateCallInstOCL(M, CI, ModifyArguments, ModifyRetTy, &Attrs);
+}
+
 void SPIRVToOCL::visitCallSPIRVBuiltin(CallInst *CI, Op OC) {
   AttributeList Attrs = CI->getCalledFunction()->getAttributes();
   mutateCallInstOCL(
@@ -506,6 +672,89 @@ void SPIRVToOCL::visitCallSPIRVBuiltin(CallInst *CI, Op OC) {
         return OCLSPIRVBuiltinMap::rmap(OC);
       },
       &Attrs);
+}
+
+void SPIRVToOCL::visitCallSPIRVOCLExt(CallInst *CI, OCLExtOpKind Kind) {
+  AttributeList Attrs = CI->getCalledFunction()->getAttributes();
+  mutateCallInstOCL(
+      M, CI,
+      [=](CallInst *, std::vector<Value *> &Args) {
+        return OCLExtOpMap::map(Kind);
+      },
+      &Attrs);
+}
+
+void SPIRVToOCL::visitCallSPIRVVLoadn(CallInst *CI, OCLExtOpKind Kind) {
+  AttributeList Attrs = CI->getCalledFunction()->getAttributes();
+  mutateCallInstOCL(
+      M, CI,
+      [=](CallInst *, std::vector<Value *> &Args) {
+        std::string Name = OCLExtOpMap::map(Kind);
+        if (ConstantInt *C = dyn_cast<ConstantInt>(Args.back())) {
+          uint64_t NumComponents = C->getZExtValue();
+          std::stringstream SS;
+          SS << NumComponents;
+          Name.replace(Name.find("n"), 1, SS.str());
+        }
+        Args.pop_back();
+        return Name;
+      },
+      &Attrs);
+}
+
+void SPIRVToOCL::visitCallSPIRVVStore(CallInst *CI, OCLExtOpKind Kind) {
+  AttributeList Attrs = CI->getCalledFunction()->getAttributes();
+  mutateCallInstOCL(
+      M, CI,
+      [=](CallInst *, std::vector<Value *> &Args) {
+        std::string Name = OCLExtOpMap::map(Kind);
+        if (Kind == OpenCLLIB::Vstore_half_r ||
+            Kind == OpenCLLIB::Vstore_halfn_r ||
+            Kind == OpenCLLIB::Vstorea_halfn_r) {
+          auto C = cast<ConstantInt>(Args.back());
+          auto RoundingMode =
+              static_cast<SPIRVFPRoundingModeKind>(C->getZExtValue());
+          Name.replace(Name.find("_r"), 2,
+                       std::string("_") +
+                           SPIRSPIRVFPRoundingModeMap::rmap(RoundingMode));
+          Args.pop_back();
+        }
+
+        if (Kind == OpenCLLIB::Vstore_halfn ||
+            Kind == OpenCLLIB::Vstore_halfn_r ||
+            Kind == OpenCLLIB::Vstorea_halfn ||
+            Kind == OpenCLLIB::Vstorea_halfn_r || Kind == OpenCLLIB::Vstoren) {
+          if (auto DataType = dyn_cast<VectorType>(Args[0]->getType())) {
+            uint64_t NumElements = DataType->getElementCount().getValue();
+            assert((NumElements == 2 || NumElements == 3 || NumElements == 4 ||
+                    NumElements == 8 || NumElements == 16) &&
+                   "Unsupported vector size for vstore instruction!");
+            std::stringstream SS;
+            SS << NumElements;
+            Name.replace(Name.find("n"), 1, SS.str());
+          }
+        }
+
+        return Name;
+      },
+      &Attrs);
+}
+
+void SPIRVToOCL::visitCallSPIRVPrintf(CallInst *CI, OCLExtOpKind Kind) {
+  AttributeList Attrs = CI->getCalledFunction()->getAttributes();
+  CallInst *NewCI = mutateCallInstOCL(
+      M, CI,
+      [=](CallInst *, std::vector<Value *> &Args) {
+        return OCLExtOpMap::map(OpenCLLIB::Printf);
+      },
+      &Attrs);
+
+  // Clang represents printf function without mangling
+  std::string TargetName = "printf";
+  if (Function *F = M->getFunction(TargetName))
+    NewCI->setCalledFunction(F);
+  else
+    NewCI->getCalledFunction()->setName(TargetName);
 }
 
 std::string SPIRVToOCL::getGroupBuiltinPrefix(CallInst *CI) {

@@ -668,7 +668,7 @@ void LLVMToSPIRV::transVectorComputeMetadata(Function *F) {
     auto ArgNo = I->getArgNo();
     SPIRVFunctionParameter *BA = BF->getArgument(ArgNo);
     if (Attrs.hasAttribute(ArgNo + 1, kVCMetadata::VCArgumentIOKind)) {
-      SPIRVWord Kind;
+      SPIRVWord Kind = {};
       Attrs.getAttribute(ArgNo + 1, kVCMetadata::VCArgumentIOKind)
           .getValueAsString()
           .getAsInteger(0, Kind);
@@ -1329,7 +1329,7 @@ SPIRVValue *LLVMToSPIRV::transValueWithoutDecoration(Value *V,
     if (IsVectorCompute) {
       BVar->addDecorate(DecorationVectorComputeVariableINTEL);
       if (GV->hasAttribute(kVCMetadata::VCByteOffset)) {
-        SPIRVWord Offset;
+        SPIRVWord Offset = {};
         GV->getAttribute(kVCMetadata::VCByteOffset)
             .getValueAsString()
             .getAsInteger(0, Offset);
@@ -2910,8 +2910,15 @@ SPIRVWord LLVMToSPIRV::transFunctionControlMask(Function *F) {
   SPIRVWord FCM = 0;
   SPIRSPIRVFuncCtlMaskMap::foreach (
       [&](Attribute::AttrKind Attr, SPIRVFunctionControlMaskKind Mask) {
-        if (F->hasFnAttribute(Attr))
+        if (F->hasFnAttribute(Attr)) {
+          if (Attr == Attribute::OptimizeNone) {
+            if (!BM->isAllowedToUseExtension(ExtensionID::SPV_INTEL_optnone))
+              return;
+            BM->addExtension(ExtensionID::SPV_INTEL_optnone);
+            BM->addCapability(internal::CapabilityOptNoneINTEL);
+          }
           FCM |= Mask;
+        }
       });
   return FCM;
 }

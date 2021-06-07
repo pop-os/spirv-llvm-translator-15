@@ -122,10 +122,7 @@ public:
   Instruction *transBuiltinFromInst(const std::string &FuncName,
                                     SPIRVInstruction *BI, BasicBlock *BB);
   Instruction *transOCLBuiltinFromInst(SPIRVInstruction *BI, BasicBlock *BB);
-  Instruction *transSPIRVBuiltinFromInst(SPIRVInstruction *BI, BasicBlock *BB,
-                                         bool AddRetTypePostfix = false);
-  void transOCLVectorLoadStore(std::string &UnmangledName,
-                               std::vector<SPIRVWord> &BArgs);
+  Instruction *transSPIRVBuiltinFromInst(SPIRVInstruction *BI, BasicBlock *BB);
 
   /// Post-process translated LLVM module for OpenCL.
   bool postProcessOCL();
@@ -143,16 +140,6 @@ public:
   /// first, then post-processed to have pointer arguments.
   bool postProcessOCLBuiltinWithArrayArguments(Function *F,
                                                StringRef DemangledName);
-
-  /// \brief Post-process OpImageSampleExplicitLod.
-  ///   sampled_image = __spirv_SampledImage__(image, sampler);
-  ///   return __spirv_ImageSampleExplicitLod__(sampled_image, image_operands,
-  ///                                           ...);
-  /// =>
-  ///   read_image(image, sampler, ...)
-  /// \return transformed call instruction.
-  Instruction *postProcessOCLReadImage(SPIRVInstruction *BI, CallInst *CI,
-                                       const std::string &DemangledName);
 
   /// \brief Post-process OpImageWrite.
   ///   return write_image(image, coord, color, image_operands, ...);
