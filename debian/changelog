@@ -1,3 +1,9 @@
+spirv-llvm-translator (13.0.0-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Oct 2021 15:00:14 +0300
+
 spirv-llvm-translator (13.0~git20210929-1) unstable; urgency=medium
 
   * New upstream snapshot.
