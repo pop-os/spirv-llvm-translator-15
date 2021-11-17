@@ -6,7 +6,6 @@ Uploaders: Timo Aaltonen <tjaalton@debian.org>
 Build-Depends: debhelper-compat (= 13),
  cmake,
  libclang-13-dev,
- lldb-13,
  llvm-13-dev,
  spirv-headers,
 Standards-Version: 4.6.0
