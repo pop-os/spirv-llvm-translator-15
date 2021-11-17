@@ -6,7 +6,6 @@ Uploaders: Timo Aaltonen <tjaalton@debian.org>
 Build-Depends: debhelper-compat (= 13),
  cmake,
  libclang-11-dev,
- lldb-11,
  llvm-11-dev,
 Standards-Version: 4.6.0
 Homepage: https://github.com/KhronosGroup/SPIRV-LLVM-Translator

@@ -2,6 +2,8 @@ spirv-llvm-translator (11.0.0-2) UNRELEASED; urgency=medium
 
   * control: Bump debhelper to 13.
   * control: Bump policy to 4.6.0.
+  * control: Drop lldb-11 from build-depends, it's not used and prevents
+    build on mips/mipsel.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Oct 2021 15:00:14 +0300
 
