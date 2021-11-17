@@ -1,9 +1,9 @@
-spirv-llvm-translator (13.0.0-2) UNRELEASED; urgency=medium
+spirv-llvm-translator (13.0.0-2) unstable; urgency=medium
 
   * control: Drop lldb-13 from build-depends, it's not used and prevents
     build on mips/mipsel.
 
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 17 Nov 2021 11:00:30 +0200
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 17 Nov 2021 11:00:43 +0200
 
 spirv-llvm-translator (13.0.0-1) unstable; urgency=medium
 
