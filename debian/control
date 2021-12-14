@@ -15,6 +15,8 @@ Vcs-Git: https://salsa.debian.org/opencl-team/spirv-llvm-translator.git
 
 Package: libllvmspirvlib12
 Architecture: any
+Multi-Arch: same
+Section: libs
 Depends:
  ${shlibs:Depends},
  ${misc:Depends}
@@ -27,10 +29,10 @@ Description: bi-directional translator for LLVM/SPIRV -- shared library
 
 Package: libllvmspirvlib-dev
 Architecture: any
+Multi-Arch: same
 Depends:
  libllvmspirvlib12 (= ${binary:Version}),
  ${misc:Depends}
-Multi-Arch: same
 Provides:
  libllvmspirvlib-12-dev,
 Description: bi-directional translator for LLVM/SPIRV -- development files
