@@ -9,19 +9,14 @@ LLVM_VERSION	 = $(shell sed -n -r '/^Build/,/^$$/s/.*llvm-([0-9]+)-dev.*/\1/p' d
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
-		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_SKIP_RPATH=ON \
 		-DBUILD_SHARED_LIBS=ON
 
-override_dh_auto_build:
-	dh_auto_build
-	(cd build; make llvm-spirv)
+execute_after_dh_auto_build:
+	$(MAKE) -C build llvm-spirv
 
-override_dh_missing:
-	dh_missing --fail-missing
 
 gentarball:
 	tar --transform 's,^,$(DEB_SOURCE)-$(DEB_VERSION_UPSTREAM)/,' \
 		--exclude 'debian' --exclude-vcs \
 		-cJf ../$(DEB_SOURCE)_$(DEB_VERSION_UPSTREAM).orig.tar.xz .
-
