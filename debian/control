@@ -7,7 +7,7 @@ Build-Depends: debhelper-compat (= 13),
  cmake,
  libclang-13-dev,
  llvm-13-dev,
- spirv-headers,
+ spirv-headers (>= 1.5.5),
 Standards-Version: 4.6.0
 Homepage: https://github.com/KhronosGroup/SPIRV-LLVM-Translator
 Vcs-Browser: https://salsa.debian.org/opencl-team/spirv-llvm-translator

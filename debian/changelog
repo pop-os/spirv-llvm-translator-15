@@ -1,3 +1,10 @@
+spirv-llvm-translator (13.0.0-3) UNRELEASED; urgency=medium
+
+  * Rename OpConstFunctionPointerINTEL to OpConstantFunctionPointerINTEL to
+    fix FTBFS with spirv-headers 1.5.5.
+
+ -- Andreas Beckmann <anbe@debian.org>  Mon, 24 Jan 2022 20:10:54 +0100
+
 spirv-llvm-translator (13.0.0-2) unstable; urgency=medium
 
   * control: Drop lldb-13 from build-depends, it's not used and prevents
