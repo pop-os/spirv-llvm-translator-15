@@ -15,6 +15,7 @@ License: Expat
 
 Files: debian/*
 Copyright: 2019 Timo Aaltonen <tjaalton@debian.org>
+           © 2022 Andreas Beckmann <anbe@debian.org>
 License: BSD-3-clause
 
 License: BSD-3-clause
