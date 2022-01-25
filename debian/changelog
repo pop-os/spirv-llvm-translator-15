@@ -20,6 +20,7 @@ spirv-llvm-translator-12 (12.0.0-3) UNRELEASED; urgency=medium
     - Rename binary packages:
       + libllvmspirvlib-dev => libllvmspirvlib-12-dev,
       + llvm-spirv => llvm-spirv-12.
+    - Rename /usr/bin/llvm-spirv to /usr/bin/llvm-spirv-12.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Oct 2021 15:00:14 +0300
 
