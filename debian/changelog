@@ -1,4 +1,4 @@
-spirv-llvm-translator (12.0.0-3) UNRELEASED; urgency=medium
+spirv-llvm-translator-12 (12.0.0-3) UNRELEASED; urgency=medium
 
   [ Timo Aaltonen ]
   * control: Bump debhelper to 13.
@@ -16,6 +16,8 @@ spirv-llvm-translator (12.0.0-3) UNRELEASED; urgency=medium
   * Fix typo.
   * Update Lintian overrides.
   * Add myself to Uploaders.
+  * Have one set of packages per llvm version:
+    - Fork source package as spirv-llvm-translator-12.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Oct 2021 15:00:14 +0300
 
