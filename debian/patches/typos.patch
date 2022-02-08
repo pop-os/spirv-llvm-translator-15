@@ -12,12 +12,12 @@ Description: fix typos
  // Currently there is only two cases, when function pointers are generating in
  // LLVM IR in OpenCL - block calls and device side enqueue built-in calls.
  //
-@@ -106,7 +106,7 @@ char SPIRVLowerOCLBlocks::ID = 0;
+@@ -126,7 +126,7 @@ char SPIRVLowerOCLBlocksLegacy::ID = 0;
  
  INITIALIZE_PASS(
-     SPIRVLowerOCLBlocks, "spv-lower-ocl-blocks",
+     SPIRVLowerOCLBlocksLegacy, "spv-lower-ocl-blocks",
 -    "Remove function pointers occured in case of using OpenCL blocks", false,
 +    "Remove function pointers occurred in case of using OpenCL blocks", false,
      false)
  
- llvm::ModulePass *llvm::createSPIRVLowerOCLBlocks() {
+ llvm::ModulePass *llvm::createSPIRVLowerOCLBlocksLegacy() {
