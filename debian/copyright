@@ -4,13 +4,13 @@ Source: https://github.com/KhronosGroup/SPIRV-LLVM-Translator
 
 Files: *
 Copyright: 2014 Advanced Micro Devices, Inc.
-           2018-2020 Intel Corporation
+           2018-2021 Intel Corporation
 License: BSD-3-clause
 
-Files: lib/SPIRV/libSPIRV/spirv.hpp
+Files:
  lib/SPIRV/libSPIRV/OpenCL.std.h
  lib/SPIRV/libSPIRV/spirv_internal.hpp
-Copyright: 2014-2020 The Khronos Group Inc.
+Copyright: 2015-2020 The Khronos Group Inc.
 License: Expat
 
 Files: debian/*
