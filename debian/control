@@ -36,8 +36,13 @@ Multi-Arch: same
 Depends:
  libllvmspirvlib13 (= ${binary:Version}),
  ${misc:Depends}
+Conflicts:
+ libllvmspirvlib-x.y-dev,
+Replaces:
+ libllvmspirvlib-x.y-dev,
 Provides:
  libllvmspirvlib-13-dev,
+ libllvmspirvlib-x.y-dev,
 Description: bi-directional translator for LLVM/SPIRV -- development files
  SPIRV-LLVM-translator is a LLVM/SPIRV bi-directional translator. This
  package includes a library and a tool for translation between LLVM IR
