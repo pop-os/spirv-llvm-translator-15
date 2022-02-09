@@ -1,4 +1,4 @@
-spirv-llvm-translator-12 (12.0.0-3) UNRELEASED; urgency=medium
+spirv-llvm-translator-12 (12.0.0-3) unstable; urgency=medium
 
   [ Timo Aaltonen ]
   * control: Bump debhelper to 13.
@@ -22,7 +22,7 @@ spirv-llvm-translator-12 (12.0.0-3) UNRELEASED; urgency=medium
       + llvm-spirv => llvm-spirv-12.
     - Rename /usr/bin/llvm-spirv to /usr/bin/llvm-spirv-12.
 
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Oct 2021 15:00:14 +0300
+ -- Andreas Beckmann <anbe@debian.org>  Wed, 09 Feb 2022 20:05:39 +0100
 
 spirv-llvm-translator (12.0.0-2) unstable; urgency=medium
 
