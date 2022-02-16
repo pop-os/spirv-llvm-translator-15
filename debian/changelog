@@ -1,7 +1,7 @@
-spirv-llvm-translator (13.0.0-3) UNRELEASED; urgency=medium
+spirv-llvm-translator (13.0.0-3) unstable; urgency=medium
 
   * Rename OpConstFunctionPointerINTEL to OpConstantFunctionPointerINTEL to
-    fix FTBFS with spirv-headers 1.5.5.
+    fix FTBFS with spirv-headers 1.5.5.  (Closes: #1005458)
   * rules: Parse llvm version from Build-Depends.
   * control: Provide virtual package libllvmspirvlib-13-dev.
   * control: Set Rules-Requires-Root: no.
@@ -12,7 +12,7 @@ spirv-llvm-translator (13.0.0-3) UNRELEASED; urgency=medium
   * Update Lintian overrides.
   * Add myself to Uploaders.
 
- -- Andreas Beckmann <anbe@debian.org>  Mon, 24 Jan 2022 20:10:54 +0100
+ -- Andreas Beckmann <anbe@debian.org>  Wed, 16 Feb 2022 23:28:24 +0100
 
 spirv-llvm-translator (13.0.0-2) unstable; urgency=medium
 
