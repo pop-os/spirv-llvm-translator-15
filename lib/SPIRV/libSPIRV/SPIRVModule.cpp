@@ -128,20 +128,6 @@ public:
   getValueTypes(const std::vector<SPIRVId> &) const override;
   SPIRVMemoryModelKind getMemoryModel() const override { return MemoryModel; }
   SPIRVConstant *getLiteralAsConstant(unsigned Literal) override;
-  unsigned getNumEntryPoints(SPIRVExecutionModelKind EM) const override {
-    auto Loc = EntryPointVec.find(EM);
-    if (Loc == EntryPointVec.end())
-      return 0;
-    return Loc->second.size();
-  }
-  SPIRVFunction *getEntryPoint(SPIRVExecutionModelKind EM,
-                               unsigned I) const override {
-    auto Loc = EntryPointVec.find(EM);
-    if (Loc == EntryPointVec.end())
-      return nullptr;
-    assert(I < Loc->second.size());
-    return get<SPIRVFunction>(Loc->second[I]);
-  }
   unsigned getNumFunctions() const override { return FuncVec.size(); }
   unsigned getNumVariables() const override { return VariableVec.size(); }
   SourceLanguage getSourceLanguage(SPIRVWord *Ver = nullptr) const override {
@@ -180,6 +166,7 @@ public:
   void setGeneratorId(unsigned short Id) override { GeneratorId = Id; }
   void setGeneratorVer(unsigned short Ver) override { GeneratorVer = Ver; }
   void resolveUnknownStructFields() override;
+  void insertEntryNoId(SPIRVEntry *Entry) override { EntryNoId.insert(Entry); }
 
   void setSPIRVVersion(SPIRVWord Ver) override {
     assert(this->isAllowedToUseVersion(static_cast<VersionNumber>(Ver)));
@@ -214,8 +201,9 @@ public:
   SPIRVGroupMemberDecorate *
   addGroupMemberDecorate(SPIRVDecorationGroup *Group,
                          const std::vector<SPIRVEntry *> &Targets) override;
-  void addEntryPoint(SPIRVExecutionModelKind ExecModel,
-                     SPIRVId EntryPoint) override;
+  void addEntryPoint(SPIRVExecutionModelKind ExecModel, SPIRVId EntryPoint,
+                     const std::string &Name,
+                     const std::vector<SPIRVId> &Variables) override;
   SPIRVForward *addForward(SPIRVType *Ty) override;
   SPIRVForward *addForward(SPIRVId, SPIRVType *Ty) override;
   SPIRVFunction *addFunction(SPIRVFunction *) override;
@@ -244,6 +232,9 @@ public:
   SPIRVEntry *addTypeStructContinuedINTEL(unsigned NumMembers) override;
   void closeStructType(SPIRVTypeStruct *T, bool) override;
   SPIRVTypeVector *addVectorType(SPIRVType *, SPIRVWord) override;
+  SPIRVTypeJointMatrixINTEL *addJointMatrixINTELType(SPIRVType *, SPIRVValue *,
+                                                     SPIRVValue *, SPIRVValue *,
+                                                     SPIRVValue *) override;
   SPIRVType *addOpaqueGenericType(Op) override;
   SPIRVTypeDeviceEvent *addDeviceEventType() override;
   SPIRVTypeQueue *addQueueType() override;
@@ -269,8 +260,8 @@ public:
                            const std::vector<SPIRVValue *> &Elements) override;
   SPIRVEntry *addSpecConstantCompositeContinuedINTEL(
       const std::vector<SPIRVValue *> &) override;
-  SPIRVValue *addConstFunctionPointerINTEL(SPIRVType *Ty,
-                                           SPIRVFunction *F) override;
+  SPIRVValue *addConstantFunctionPointerINTEL(SPIRVType *Ty,
+                                              SPIRVFunction *F) override;
   SPIRVValue *addConstant(SPIRVValue *) override;
   SPIRVValue *addConstant(SPIRVType *, uint64_t) override;
   SPIRVValue *addConstant(SPIRVType *, llvm::APInt) override;
@@ -491,11 +482,11 @@ private:
   typedef std::vector<SPIRVGroupDecorateGeneric *> SPIRVGroupDecVec;
   typedef std::vector<SPIRVAsmTargetINTEL *> SPIRVAsmTargetVector;
   typedef std::vector<SPIRVAsmINTEL *> SPIRVAsmVector;
+  typedef std::vector<SPIRVEntryPoint *> SPIRVEntryPointVec;
   typedef std::map<SPIRVId, SPIRVExtInstSetKind> SPIRVIdToInstructionSetMap;
   std::map<SPIRVExtInstSetKind, SPIRVId> ExtInstSetIds;
   typedef std::map<SPIRVId, SPIRVExtInstSetKind> SPIRVIdToBuiltinSetMap;
   typedef std::map<SPIRVExecutionModelKind, SPIRVIdSet> SPIRVExecModelIdSetMap;
-  typedef std::map<SPIRVExecutionModelKind, SPIRVIdVec> SPIRVExecModelIdVecMap;
   typedef std::unordered_map<std::string, SPIRVString *> SPIRVStringMap;
   typedef std::map<SPIRVTypeStruct *, std::vector<std::pair<unsigned, SPIRVId>>>
       SPIRVUnknownStructFieldMap;
@@ -515,13 +506,13 @@ private:
   SPIRVStringVec StringVec;
   SPIRVMemberNameVec MemberNameVec;
   std::shared_ptr<const SPIRVLine> CurrentLine;
-  SPIRVDecorateSet DecorateSet;
+  SPIRVDecorateVec DecorateVec;
   SPIRVDecGroupVec DecGroupVec;
   SPIRVGroupDecVec GroupDecVec;
   SPIRVAsmTargetVector AsmTargetVec;
   SPIRVAsmVector AsmVec;
   SPIRVExecModelIdSetMap EntryPointSet;
-  SPIRVExecModelIdVecMap EntryPointVec;
+  SPIRVEntryPointVec EntryPointVec;
   SPIRVStringMap StrMap;
   SPIRVCapMap CapMap;
   SPIRVUnknownStructFieldMap UnknownStructFieldMap;
@@ -897,6 +888,14 @@ SPIRVTypeVector *SPIRVModuleImpl::addVectorType(SPIRVType *CompType,
                                                 SPIRVWord CompCount) {
   return addType(new SPIRVTypeVector(this, getId(), CompType, CompCount));
 }
+
+SPIRVTypeJointMatrixINTEL *SPIRVModuleImpl::addJointMatrixINTELType(
+    SPIRVType *CompType, SPIRVValue *Rows, SPIRVValue *Columns,
+    SPIRVValue *Layout, SPIRVValue *Scope) {
+  return addType(new SPIRVTypeJointMatrixINTEL(this, getId(), CompType, Rows,
+                                               Columns, Layout, Scope));
+}
+
 SPIRVType *SPIRVModuleImpl::addOpaqueGenericType(Op TheOpCode) {
   return addType(new SPIRVTypeOpaqueGeneric(TheOpCode, this, getId()));
 }
@@ -982,17 +981,20 @@ SPIRVModuleImpl::addDecorate(SPIRVDecorateGeneric *Dec) {
   (void)Found;
   assert(Found && "Decorate target does not exist");
   if (!Dec->getOwner())
-    DecorateSet.insert(Dec);
+    DecorateVec.push_back(Dec);
   addCapabilities(Dec->getRequiredCapability());
   return Dec;
 }
 
 void SPIRVModuleImpl::addEntryPoint(SPIRVExecutionModelKind ExecModel,
-                                    SPIRVId EntryPoint) {
+                                    SPIRVId EntryPoint, const std::string &Name,
+                                    const std::vector<SPIRVId> &Variables) {
   assert(isValid(ExecModel) && "Invalid execution model");
   assert(EntryPoint != SPIRVID_INVALID && "Invalid entry point");
+  auto *EP =
+      add(new SPIRVEntryPoint(this, ExecModel, EntryPoint, Name, Variables));
+  EntryPointVec.push_back(EP);
   EntryPointSet[ExecModel].insert(EntryPoint);
-  EntryPointVec[ExecModel].push_back(EntryPoint);
   addCapabilities(SPIRV::getCapability(ExecModel));
 }
 
@@ -1142,9 +1144,10 @@ SPIRVEntry *SPIRVModuleImpl::addSpecConstantCompositeContinuedINTEL(
   return add(new SPIRVSpecConstantCompositeContinuedINTEL(this, Elements));
 }
 
-SPIRVValue *SPIRVModuleImpl::addConstFunctionPointerINTEL(SPIRVType *Ty,
-                                                          SPIRVFunction *F) {
-  return addConstant(new SPIRVConstFunctionPointerINTEL(getId(), Ty, F, this));
+SPIRVValue *SPIRVModuleImpl::addConstantFunctionPointerINTEL(SPIRVType *Ty,
+                                                             SPIRVFunction *F) {
+  return addConstant(
+      new SPIRVConstantFunctionPointerINTEL(getId(), Ty, F, this));
 }
 
 SPIRVValue *SPIRVModuleImpl::addUndef(SPIRVType *TheType) {
@@ -1667,8 +1670,8 @@ spv_ostream &operator<<(spv_ostream &O, const std::vector<T *> &V) {
   return O;
 }
 
-template <class T, class B>
-spv_ostream &operator<<(spv_ostream &O, const std::multiset<T *, B> &V) {
+template <class T, class B = std::less<T>>
+spv_ostream &operator<<(spv_ostream &O, const std::unordered_set<T *, B> &V) {
   for (auto &I : V)
     O << *I;
   return O;
@@ -1820,14 +1823,10 @@ spv_ostream &operator<<(spv_ostream &O, SPIRVModule &M) {
 
   O << SPIRVMemoryModel(&M);
 
-  for (auto &I : MI.EntryPointVec)
-    for (auto &II : I.second)
-      O << SPIRVEntryPoint(&M, I.first, II, M.get<SPIRVFunction>(II)->getName(),
-                           M.get<SPIRVFunction>(II)->getVariables());
+  O << MI.EntryPointVec;
 
   for (auto &I : MI.EntryPointVec)
-    for (auto &II : I.second)
-      MI.get<SPIRVFunction>(II)->encodeExecutionModes(O);
+    MI.get<SPIRVFunction>(I->getTargetId())->encodeExecutionModes(O);
 
   O << MI.StringVec;
 
@@ -1859,7 +1858,7 @@ spv_ostream &operator<<(spv_ostream &O, SPIRVModule &M) {
                      MI.ForwardPointerVec);
 
   O << MI.MemberNameVec << MI.ModuleProcessedVec << MI.DecGroupVec
-    << MI.DecorateSet << MI.GroupDecVec << MI.ForwardPointerVec << TS;
+    << MI.DecorateVec << MI.GroupDecVec << MI.ForwardPointerVec << TS;
 
   if (M.isAllowedToUseExtension(ExtensionID::SPV_INTEL_inline_assembly)) {
     O << SPIRVNL() << MI.AsmTargetVec << MI.AsmVec;
@@ -1884,11 +1883,11 @@ SPIRVDecorationGroup *SPIRVModuleImpl::addDecorationGroup() {
 SPIRVDecorationGroup *
 SPIRVModuleImpl::addDecorationGroup(SPIRVDecorationGroup *Group) {
   add(Group);
-  Group->takeDecorates(DecorateSet);
+  Group->takeDecorates(DecorateVec);
   DecGroupVec.push_back(Group);
   SPIRVDBG(spvdbgs() << "[addDecorationGroup] {" << *Group << "}\n";
-           spvdbgs() << "  Remaining DecorateSet: {" << DecorateSet << "}\n");
-  assert(DecorateSet.empty());
+           spvdbgs() << "  Remaining DecorateVec: {" << DecorateVec << "}\n");
+  assert(DecorateVec.empty());
   return Group;
 }
 

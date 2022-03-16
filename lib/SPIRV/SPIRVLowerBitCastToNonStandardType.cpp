@@ -46,6 +46,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 #include <utility>
 
@@ -56,7 +57,7 @@ namespace SPIRV {
 static VectorType *getVectorType(Type *Ty) {
   assert(Ty != nullptr && "Expected non-null type");
   if (auto *ElemTy = dyn_cast<PointerType>(Ty))
-    Ty = ElemTy->getElementType();
+    Ty = ElemTy->getPointerElementType();
   return dyn_cast<VectorType>(Ty);
 }
 
@@ -74,7 +75,9 @@ bool lowerBitCastToNonStdVec(Instruction *OldInst, Value *NewInst,
   static constexpr unsigned MaxRecursionDepth = 16;
   if (RecursionDepth++ > MaxRecursionDepth)
     report_fatal_error(
-        "The depth of recursion exceeds the maximum possible depth", false);
+        llvm::Twine(
+            "The depth of recursion exceeds the maximum possible depth"),
+        false);
 
   bool Changed = false;
   VectorType *NewVecTy = getVectorType(NewInst->getType());
@@ -103,8 +106,8 @@ bool lowerBitCastToNonStdVec(Instruction *OldInst, Value *NewInst,
       }
       // Handle extractelement instruction which is following the load
       else if (auto *EEI = dyn_cast<ExtractElementInst>(U)) {
-        uint64_t NumElemsInOldVec = OldVecTy->getElementCount().getValue();
-        uint64_t NumElemsInNewVec = NewVecTy->getElementCount().getValue();
+        uint64_t NumElemsInOldVec = OldVecTy->getElementCount().getFixedValue();
+        uint64_t NumElemsInNewVec = NewVecTy->getElementCount().getFixedValue();
         uint64_t OldElemIdx =
             cast<ConstantInt>(EEI->getIndexOperand())->getZExtValue();
         uint64_t NewElemIdx =
@@ -140,7 +143,8 @@ bool lowerBitCastToNonStdVec(Instruction *OldInst, Value *NewInst,
 class SPIRVLowerBitCastToNonStandardTypePass
     : public llvm::PassInfoMixin<SPIRVLowerBitCastToNonStandardTypePass> {
 public:
-  SPIRVLowerBitCastToNonStandardTypePass() {}
+  SPIRVLowerBitCastToNonStandardTypePass(const SPIRV::TranslatorOpts &Opts)
+      : Opts(Opts) {}
 
   PreservedAnalyses
   runLowerBitCastToNonStandardType(Function &F, FunctionAnalysisManager &FAM) {
@@ -148,6 +152,13 @@ public:
     // known. We assume that bad type won't be passed to a function as
     // parameter, since it added by an optimization.
     bool Changed = false;
+
+    // SPV_INTEL_vector_compute allows to use vectors with any number of
+    // components. Since this method only lowers vectors with non-standard
+    // in pure SPIR-V number of components, there is no need to do anything in
+    // case SPV_INTEL_vector_compute is enabled.
+    if (Opts.isAllowedToUseExtension(ExtensionID::SPV_INTEL_vector_compute))
+      return PreservedAnalyses::all();
 
     std::vector<Instruction *> BCastsToNonStdVec;
     std::vector<Instruction *> InstsToErase;
@@ -158,15 +169,18 @@ public:
           continue;
         VectorType *SrcVecTy = getVectorType(BC->getSrcTy());
         if (SrcVecTy) {
-          uint64_t NumElemsInSrcVec = SrcVecTy->getElementCount().getValue();
+          uint64_t NumElemsInSrcVec =
+              SrcVecTy->getElementCount().getFixedValue();
           if (!isValidVectorSize(NumElemsInSrcVec))
-            report_fatal_error("Unsupported vector type with the size of: " +
-                                   std::to_string(NumElemsInSrcVec),
-                               false);
+            report_fatal_error(
+                llvm::Twine("Unsupported vector type with the size of: " +
+                            std::to_string(NumElemsInSrcVec)),
+                false);
         }
         VectorType *DestVecTy = getVectorType(BC->getDestTy());
         if (DestVecTy) {
-          uint64_t NumElemsInDestVec = DestVecTy->getElementCount().getValue();
+          uint64_t NumElemsInDestVec =
+              DestVecTy->getElementCount().getFixedValue();
           if (!isValidVectorSize(NumElemsInDestVec))
             BCastsToNonStdVec.push_back(&I);
         }
@@ -184,14 +198,21 @@ public:
 
     return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
   }
+
+private:
+  SPIRV::TranslatorOpts Opts;
 };
 
 class SPIRVLowerBitCastToNonStandardTypeLegacy : public FunctionPass {
 public:
   static char ID;
+  SPIRVLowerBitCastToNonStandardTypeLegacy(const SPIRV::TranslatorOpts &Opts)
+      : FunctionPass(ID), Opts(Opts) {}
+
   SPIRVLowerBitCastToNonStandardTypeLegacy() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
+    SPIRVLowerBitCastToNonStandardTypePass Impl(Opts);
     FunctionAnalysisManager FAM;
     auto PA = Impl.runLowerBitCastToNonStandardType(F, FAM);
     return !PA.areAllPreserved();
@@ -205,7 +226,7 @@ public:
   StringRef getPassName() const override { return "Lower nonstandard type"; }
 
 private:
-  SPIRVLowerBitCastToNonStandardTypePass Impl;
+  SPIRV::TranslatorOpts Opts;
 };
 
 char SPIRVLowerBitCastToNonStandardTypeLegacy::ID = 0;
@@ -216,6 +237,7 @@ INITIALIZE_PASS(SPIRVLowerBitCastToNonStandardTypeLegacy,
                 "spv-lower-bitcast-to-nonstandard-type",
                 "Remove bitcast to nonstandard types", false, false)
 
-llvm::FunctionPass *llvm::createSPIRVLowerBitCastToNonStandardTypeLegacy() {
-  return new SPIRVLowerBitCastToNonStandardTypeLegacy();
+llvm::FunctionPass *llvm::createSPIRVLowerBitCastToNonStandardTypeLegacy(
+    const SPIRV::TranslatorOpts &Opts) {
+  return new SPIRVLowerBitCastToNonStandardTypeLegacy(Opts);
 }
