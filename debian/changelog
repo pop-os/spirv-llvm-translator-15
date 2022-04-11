@@ -23,6 +23,7 @@ spirv-llvm-translator-11 (11.0.0-2) UNRELEASED; urgency=medium
     - Rename /usr/bin/llvm-spirv to /usr/bin/llvm-spirv-11.
   * Allow overriding BASE_LLVM_VERSION.
   * Restrict watch file to 11.* releases.
+  * Enable all hardening flags.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Oct 2021 15:00:14 +0300
 
