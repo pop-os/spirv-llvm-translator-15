@@ -19,9 +19,3 @@ override_dh_auto_configure:
 execute_after_dh_auto_build:
 	$(MAKE) -C build llvm-spirv
 	mv build/tools/llvm-spirv/llvm-spirv build/tools/llvm-spirv/llvm-spirv-$(LLVM_VERSION)
-
-
-gentarball:
-	tar --transform 's,^,$(DEB_SOURCE)-$(DEB_VERSION_UPSTREAM)/,' \
-		--exclude 'debian' --exclude-vcs \
-		-cJf ../$(DEB_SOURCE)_$(DEB_VERSION_UPSTREAM).orig.tar.xz .
