@@ -1,11 +1,11 @@
-spirv-llvm-translator (13.0.0-4) UNRELEASED; urgency=medium
+spirv-llvm-translator (13.0.0-4) unstable; urgency=medium
 
   * Rename /usr/bin/llvm-spirv to /usr/bin/llvm-spirv-13.
   * Restrict watch file to 13.* releases.
   * Enable all hardening flags.
   * Bump Standards-Version to 4.6.1.
 
- -- Andreas Beckmann <anbe@debian.org>  Mon, 16 May 2022 01:30:21 +0200
+ -- Andreas Beckmann <anbe@debian.org>  Mon, 16 May 2022 01:58:34 +0200
 
 spirv-llvm-translator (13.0.0-3) unstable; urgency=medium
 
