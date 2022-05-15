@@ -1,10 +1,10 @@
-spirv-llvm-translator-12 (12.0.0-4) UNRELEASED; urgency=medium
+spirv-llvm-translator-12 (12.0.0-4) unstable; urgency=medium
 
   * Restrict watch file to 12.* releases.
   * Enable all hardening flags.
   * Bump Standards-Version to 4.6.1.
 
- -- Andreas Beckmann <anbe@debian.org>  Sun, 15 May 2022 22:55:36 +0200
+ -- Andreas Beckmann <anbe@debian.org>  Sun, 15 May 2022 23:58:08 +0200
 
 spirv-llvm-translator-12 (12.0.0-3) unstable; urgency=medium
 
