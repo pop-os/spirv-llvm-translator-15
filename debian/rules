@@ -14,7 +14,8 @@ override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DBASE_LLVM_VERSION=$(LLVM_UPSTREAM_VERSION) \
 		-DCMAKE_SKIP_RPATH=ON \
-		-DBUILD_SHARED_LIBS=ON
+		-DBUILD_SHARED_LIBS=ON \
+		-Wno-dev
 
 execute_after_dh_auto_build:
 	$(MAKE) -C build llvm-spirv
