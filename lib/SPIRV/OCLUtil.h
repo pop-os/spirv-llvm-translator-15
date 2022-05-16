@@ -304,6 +304,27 @@ const static char SubgroupBlockWriteINTELPrefix[] =
     "intel_sub_group_block_write";
 const static char SubgroupImageMediaBlockINTELPrefix[] =
     "intel_sub_group_media_block";
+const static char LDEXP[] = "ldexp";
+#define _SPIRV_OP(x)                                                           \
+  const static char ConvertBFloat16##x##AsUShort##x[] =                        \
+      "intel_convert_bfloat16" #x "_as_ushort" #x;
+_SPIRV_OP()
+_SPIRV_OP(2)
+_SPIRV_OP(3)
+_SPIRV_OP(4)
+_SPIRV_OP(8)
+_SPIRV_OP(16)
+#undef _SPIRV_OP
+#define _SPIRV_OP(x)                                                           \
+  const static char ConvertAsBFloat16##x##Float##x[] =                         \
+      "intel_convert_as_bfloat16" #x "_float" #x;
+_SPIRV_OP()
+_SPIRV_OP(2)
+_SPIRV_OP(3)
+_SPIRV_OP(4)
+_SPIRV_OP(8)
+_SPIRV_OP(16)
+#undef _SPIRV_OP
 } // namespace kOCLBuiltinName
 
 /// Offset for OpenCL image channel order enumeration values.
@@ -493,14 +514,6 @@ bool isSamplerTy(Type *Ty);
 
 // Checks if the binary operator is an unfused fmul + fadd instruction.
 bool isUnfusedMulAdd(BinaryOperator *B);
-
-template <typename T> std::string toString(const T *Object) {
-  std::string S;
-  llvm::raw_string_ostream RSOS(S);
-  Object->print(RSOS);
-  RSOS.flush();
-  return S;
-}
 
 // Get data and vector size postfix for sugroup_block_{read|write} builtins
 // as specified by cl_intel_subgroups* extensions.

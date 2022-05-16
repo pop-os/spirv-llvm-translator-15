@@ -39,7 +39,9 @@ add_llvm_library(LLVMSPIRVLib
   LINK_COMPONENTS
     Analysis
     BitWriter
+    CodeGen
     Core
+    Demangle
     IRReader
     Linker
     Support
