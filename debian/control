@@ -7,8 +7,8 @@ Uploaders:
  Andreas Beckmann <anbe@debian.org>,
 Build-Depends: debhelper-compat (= 13),
  cmake,
- libclang-13-dev,
- llvm-13-dev,
+ libclang-14-dev,
+ llvm-14-dev,
  spirv-headers (>= 1.5.5),
 Rules-Requires-Root: no
 Standards-Version: 4.6.1
