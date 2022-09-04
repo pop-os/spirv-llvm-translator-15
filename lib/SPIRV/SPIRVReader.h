@@ -41,6 +41,7 @@
 #ifndef SPIRVREADER_H
 #define SPIRVREADER_H
 
+#include "SPIRVInternal.h"
 #include "SPIRVModule.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -82,6 +83,8 @@ public:
   Type *transType(SPIRVType *BT, bool IsClassMember = false);
   std::string transTypeToOCLTypeName(SPIRVType *BT, bool IsSigned = true);
   std::vector<Type *> transTypeVector(const std::vector<SPIRVType *> &);
+  std::vector<PointerIndirectPair>
+  getPointerElementTypes(llvm::ArrayRef<SPIRVType *> Tys);
   bool translate();
   bool transAddressingModel();
 
@@ -95,6 +98,7 @@ public:
   std::vector<Value *> transValue(const std::vector<SPIRVValue *> &,
                                   Function *F, BasicBlock *);
   Function *transFunction(SPIRVFunction *F);
+  void transFunctionAttrs(SPIRVFunction *BF, Function *F);
   Value *transBlockInvoke(SPIRVValue *Invoke, BasicBlock *BB);
   Instruction *transWGSizeQueryBI(SPIRVInstruction *BI, BasicBlock *BB);
   Instruction *transSGSizeQueryBI(SPIRVInstruction *BI, BasicBlock *BB);
@@ -243,6 +247,9 @@ private:
   void transMemAliasingINTELDecorations(SPIRVValue *BV, Value *V);
   void transVarDecorationsToMetadata(SPIRVValue *BV, Value *V);
   void transFunctionDecorationsToMetadata(SPIRVFunction *BF, Function *F);
+  void
+  transFunctionPointerCallArgumentAttributes(SPIRVValue *BV, CallInst *CI,
+                                             SPIRVTypeFunction *CalledFnTy);
 }; // class SPIRVToLLVM
 
 } // namespace SPIRV
