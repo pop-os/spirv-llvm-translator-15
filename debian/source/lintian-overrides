@@ -1,2 +1,2 @@
 # test data
-very-long-line-length-in-source-file test/*.ll line * is * characters long (>*)
+very-long-line-length-in-source-file * > 512 [test/*.ll:*]
