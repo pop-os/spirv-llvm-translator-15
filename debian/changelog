@@ -1,3 +1,9 @@
+spirv-llvm-translator-15 (14.0.0-4) UNRELEASED; urgency=medium
+
+  * Fork source package as spirv-llvm-translator-15.
+
+ -- Andreas Beckmann <anbe@debian.org>  Sun, 02 Oct 2022 14:28:03 +0200
+
 spirv-llvm-translator-14 (14.0.0-3) unstable; urgency=medium
 
   * Update .symbols control file.
