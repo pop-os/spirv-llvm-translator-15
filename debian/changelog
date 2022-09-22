@@ -2,6 +2,7 @@ spirv-llvm-translator-14 (14.0.0-2) UNRELEASED; urgency=medium
 
   * Restrict watch file to 14.* releases.
   * Build with spirv-tools.
+  * Add autopkgtest, ignore failures on !amd64.
 
  -- Andreas Beckmann <anbe@debian.org>  Mon, 19 Sep 2022 14:29:01 +0200
 
