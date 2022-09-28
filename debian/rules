@@ -20,3 +20,8 @@ override_dh_auto_configure:
 execute_after_dh_auto_build:
 	$(MAKE) -C build llvm-spirv
 	mv build/tools/llvm-spirv/llvm-spirv build/tools/llvm-spirv/llvm-spirv-$(LLVM_VERSION)
+
+
+update-symbols:
+	pkgkde-getbuildlogs
+	echo "pkgkde-symbolshelper batchpatch -v $(DEB_VERSION_EPOCH_UPSTREAM) $(DEB_SOURCE)_$(DEB_DISTRIBUTION)_logs/$(DEB_SOURCE)_$(DEB_VERSION)_*build"

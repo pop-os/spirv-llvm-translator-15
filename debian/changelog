@@ -1,3 +1,9 @@
+spirv-llvm-translator-11 (11.0.0-3) UNRELEASED; urgency=medium
+
+  * Use pkg-kde-tools to manage the .symbols.
+
+ -- Andreas Beckmann <anbe@debian.org>  Wed, 28 Sep 2022 15:55:52 +0200
+
 spirv-llvm-translator-11 (11.0.0-2) unstable; urgency=medium
 
   [ Timo Aaltonen ]
