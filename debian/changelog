@@ -1,3 +1,9 @@
+spirv-llvm-translator-12 (12.0.0-6) UNRELEASED; urgency=medium
+
+  * Update .symbols control file.
+
+ -- Andreas Beckmann <anbe@debian.org>  Thu, 29 Sep 2022 21:15:17 +0200
+
 spirv-llvm-translator-12 (12.0.0-5) unstable; urgency=medium
 
   * Use pkg-kde-tools to manage the .symbols.
