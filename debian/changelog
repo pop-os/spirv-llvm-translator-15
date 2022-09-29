@@ -1,3 +1,11 @@
+spirv-llvm-translator-12 (12.0.0-5) UNRELEASED; urgency=medium
+
+  * Use pkg-kde-tools to manage the .symbols.
+  * Add .symbols control file.
+  * Update Lintian overrides.
+
+ -- Andreas Beckmann <anbe@debian.org>  Thu, 29 Sep 2022 03:55:29 +0200
+
 spirv-llvm-translator-12 (12.0.0-4) unstable; urgency=medium
 
   * Restrict watch file to 12.* releases.
@@ -56,6 +64,20 @@ spirv-llvm-translator (12.0~git20210212-1) experimental; urgency=medium
   * Build against llvm-12.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Mon, 12 Apr 2021 20:24:01 +0300
+
+spirv-llvm-translator-11 (11.0.0-4) unstable; urgency=medium
+
+  * Update .symbols control file.
+
+ -- Andreas Beckmann <anbe@debian.org>  Thu, 29 Sep 2022 03:48:48 +0200
+
+spirv-llvm-translator-11 (11.0.0-3) unstable; urgency=medium
+
+  * Use pkg-kde-tools to manage the .symbols.
+  * Add .symbols control file.
+  * Update Lintian overrides.
+
+ -- Andreas Beckmann <anbe@debian.org>  Wed, 28 Sep 2022 19:10:39 +0200
 
 spirv-llvm-translator-11 (11.0.0-2) unstable; urgency=medium
 
