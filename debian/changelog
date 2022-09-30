@@ -4,6 +4,8 @@ spirv-llvm-translator-14 (14.0.0-2) UNRELEASED; urgency=medium
   * Build with spirv-tools.
   * Add autopkgtest, ignore failures on !amd64.
   * Enable build-time tests, ignore failures on !amd64.
+  * Use pkg-kde-tools to manage the .symbols.
+  * Add .symbols control file.
 
  -- Andreas Beckmann <anbe@debian.org>  Mon, 19 Sep 2022 14:29:01 +0200
 
@@ -15,6 +17,20 @@ spirv-llvm-translator-14 (14.0.0-1) unstable; urgency=medium
   * Build with llvm 14.
 
  -- Andreas Beckmann <anbe@debian.org>  Mon, 16 May 2022 09:29:32 +0200
+
+spirv-llvm-translator (13.0.0-6) unstable; urgency=medium
+
+  * Update .symbols control file.
+
+ -- Andreas Beckmann <anbe@debian.org>  Fri, 30 Sep 2022 16:36:05 +0200
+
+spirv-llvm-translator (13.0.0-5) unstable; urgency=medium
+
+  * Use pkg-kde-tools to manage the .symbols.
+  * Add .symbols control file.
+  * Update Lintian overrides.
+
+ -- Andreas Beckmann <anbe@debian.org>  Thu, 29 Sep 2022 22:34:44 +0200
 
 spirv-llvm-translator (13.0.0-4) unstable; urgency=medium
 
@@ -63,6 +79,20 @@ spirv-llvm-translator (13.0~git20210929-1) unstable; urgency=medium
   * Add spirv-headers to build-depends, set headers dir.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 29 Sep 2021 14:40:45 +0300
+
+spirv-llvm-translator-12 (12.0.0-6) unstable; urgency=medium
+
+  * Update .symbols control file.
+
+ -- Andreas Beckmann <anbe@debian.org>  Thu, 29 Sep 2022 21:34:40 +0200
+
+spirv-llvm-translator-12 (12.0.0-5) unstable; urgency=medium
+
+  * Use pkg-kde-tools to manage the .symbols.
+  * Add .symbols control file.
+  * Update Lintian overrides.
+
+ -- Andreas Beckmann <anbe@debian.org>  Thu, 29 Sep 2022 04:13:09 +0200
 
 spirv-llvm-translator-12 (12.0.0-4) unstable; urgency=medium
 
@@ -122,6 +152,20 @@ spirv-llvm-translator (12.0~git20210212-1) experimental; urgency=medium
   * Build against llvm-12.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Mon, 12 Apr 2021 20:24:01 +0300
+
+spirv-llvm-translator-11 (11.0.0-4) unstable; urgency=medium
+
+  * Update .symbols control file.
+
+ -- Andreas Beckmann <anbe@debian.org>  Thu, 29 Sep 2022 03:48:48 +0200
+
+spirv-llvm-translator-11 (11.0.0-3) unstable; urgency=medium
+
+  * Use pkg-kde-tools to manage the .symbols.
+  * Add .symbols control file.
+  * Update Lintian overrides.
+
+ -- Andreas Beckmann <anbe@debian.org>  Wed, 28 Sep 2022 19:10:39 +0200
 
 spirv-llvm-translator-11 (11.0.0-2) unstable; urgency=medium
 
