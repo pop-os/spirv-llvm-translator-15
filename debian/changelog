@@ -1,4 +1,4 @@
-spirv-llvm-translator-14 (14.0.0-2) UNRELEASED; urgency=medium
+spirv-llvm-translator-14 (14.0.0-2) unstable; urgency=medium
 
   * Restrict watch file to 14.* releases.
   * Build with spirv-tools.
@@ -7,7 +7,7 @@ spirv-llvm-translator-14 (14.0.0-2) UNRELEASED; urgency=medium
   * Use pkg-kde-tools to manage the .symbols.
   * Add .symbols control file.
 
- -- Andreas Beckmann <anbe@debian.org>  Mon, 19 Sep 2022 14:29:01 +0200
+ -- Andreas Beckmann <anbe@debian.org>  Fri, 30 Sep 2022 18:00:36 +0200
 
 spirv-llvm-translator-14 (14.0.0-1) unstable; urgency=medium
 
