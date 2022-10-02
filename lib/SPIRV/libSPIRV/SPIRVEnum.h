@@ -263,6 +263,8 @@ template <> inline void SPIRVMap<SPIRVExecutionModeKind, SPIRVCapVec>::init() {
                {internal::CapabilityFastCompositeINTEL});
   ADD_VEC_INIT(internal::ExecutionModeStreamingInterfaceINTEL,
                {CapabilityFPGAKernelAttributesINTEL});
+  ADD_VEC_INIT(ExecutionModeNamedBarrierCountINTEL,
+               {CapabilityVectorComputeINTEL});
 }
 
 template <> inline void SPIRVMap<SPIRVMemoryModelKind, SPIRVCapVec>::init() {
@@ -423,6 +425,9 @@ template <> inline void SPIRVMap<Decoration, SPIRVCapVec>::init() {
                {CapabilityFunctionFloatControlINTEL});
   ADD_VEC_INIT(DecorationSingleElementVectorINTEL,
                {CapabilityVectorComputeINTEL});
+  ADD_VEC_INIT(DecorationAliasScopeINTEL,
+               {CapabilityMemoryAccessAliasingINTEL});
+  ADD_VEC_INIT(DecorationNoAliasINTEL, {CapabilityMemoryAccessAliasingINTEL});
   ADD_VEC_INIT(internal::DecorationCallableFunctionINTEL,
                {internal::CapabilityFastCompositeINTEL});
   ADD_VEC_INIT(DecorationMediaBlockIOINTEL, {CapabilityVectorComputeINTEL});
@@ -431,10 +436,6 @@ template <> inline void SPIRVMap<Decoration, SPIRVCapVec>::init() {
   ADD_VEC_INIT(DecorationFuseLoopsInFunctionINTEL, {CapabilityLoopFuseINTEL});
   ADD_VEC_INIT(internal::DecorationMathOpDSPModeINTEL,
                {internal::CapabilityFPGADSPControlINTEL});
-  ADD_VEC_INIT(internal::DecorationAliasScopeINTEL,
-               {internal::CapabilityMemoryAccessAliasingINTEL});
-  ADD_VEC_INIT(internal::DecorationNoAliasINTEL,
-               {internal::CapabilityMemoryAccessAliasingINTEL});
   ADD_VEC_INIT(internal::DecorationInitiationIntervalINTEL,
                {internal::CapabilityFPGAInvocationPipeliningAttributesINTEL});
   ADD_VEC_INIT(internal::DecorationMaxConcurrencyINTEL,
