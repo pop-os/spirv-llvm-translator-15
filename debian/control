@@ -8,13 +8,13 @@ Uploaders:
 Build-Depends: debhelper-compat (= 13),
  dh-sequence-pkgkde-symbolshelper,
  cmake,
- libclang-14-dev,
- llvm-14-dev,
  pkgconf,
  spirv-headers (>= 1.5.5),
  spirv-tools,
 # keep the clang/llvm version in sync, don't forget debian/tests/control
- clang-14 <!nocheck>,
+ libclang-15-dev,
+ llvm-15-dev,
+ clang-15 <!nocheck>,
 Rules-Requires-Root: no
 Standards-Version: 4.6.1
 Homepage: https://github.com/KhronosGroup/SPIRV-LLVM-Translator
