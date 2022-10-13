@@ -1,3 +1,10 @@
+spirv-llvm-translator-15 (15.0.0-1~ubuntu0.22.04.1) jammy; urgency=medium
+
+  * Backport to jammy. (LP: #1991761)
+    - drop support for symbols, needs newer pkg-kde-tools
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 13 Oct 2022 15:56:38 +0300
+
 spirv-llvm-translator-15 (15.0.0-1) unstable; urgency=medium
 
   * New upstream release.

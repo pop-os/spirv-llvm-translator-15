@@ -6,10 +6,9 @@ Uploaders:
  Timo Aaltonen <tjaalton@debian.org>,
  Andreas Beckmann <anbe@debian.org>,
 Build-Depends: debhelper-compat (= 13),
- dh-sequence-pkgkde-symbolshelper,
  cmake,
  pkgconf,
- spirv-headers (>= 1.5.5),
+ spirv-headers (>= 1.6.1+1.3.216.0),
  spirv-tools,
 # keep the clang/llvm version in sync, don't forget debian/tests/control
  libclang-15-dev,
