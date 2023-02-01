@@ -1,3 +1,9 @@
+spirv-llvm-translator-15 (15.0.0-1~ubuntu0pop1) jammy; urgency=medium
+
+  * Pop!_OS Backport
+
+ -- Brock Szuszczewicz <brock@szu.email>  Wed, 01 Feb 2023 15:57:08 -0700
+
 spirv-llvm-translator-15 (15.0.0-1~ubuntu0.22.04.1) jammy; urgency=medium
 
   * Backport to jammy. (LP: #1991761)
