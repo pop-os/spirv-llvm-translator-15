@@ -22,7 +22,7 @@ Vcs-Browser: https://salsa.debian.org/opencl-team/spirv-llvm-translator
 Vcs-Git: https://salsa.debian.org/opencl-team/spirv-llvm-translator.git -b llvm15/main
 
 Package: libllvmspirvlib15
-Architecture: any
+Architecture: amd64 arm64 i386
 Multi-Arch: same
 Section: libs
 Depends:
@@ -36,7 +36,7 @@ Description: bi-directional translator for LLVM/SPIRV -- shared library
  This package includes the shared library.
 
 Package: libllvmspirvlib-15-dev
-Architecture: any
+Architecture: amd64 arm64 i386
 Multi-Arch: same
 Depends:
  libllvmspirvlib15 (= ${binary:Version}),
@@ -58,7 +58,7 @@ Description: bi-directional translator for LLVM/SPIRV -- development files
  This package includes static libs and headers for development.
 
 Package: llvm-spirv-15
-Architecture: any
+Architecture: amd64 arm64 i386
 Depends:
  libllvmspirvlib15 (= ${binary:Version}),
  ${shlibs:Depends},
